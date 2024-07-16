@@ -20,16 +20,17 @@ from pathlib import Path
 import traceback
 import webbrowser as wb
 # import pprint  # pretty print dict
-from mne.preprocessing import ICA, corrmap
+from mne.preprocessing import ICA
 # import matplotlib.pyplot as plt
 from datetime import datetime
 settings={} # suppress warnings
-from eeg_processing_settings_04 import *
+from eeg_processing_settings import *
 from mne.beamformer import apply_lcmv_raw, make_lcmv
 from mne.datasets import fetch_fsaverage
 
 
-EEG_version = "v3.32"
+EEG_version = "v3.35"
+
 progress_value1 = 20  # initial values
 progress_value2 = 20
 
@@ -53,19 +54,21 @@ def print_dict(dict): # pprint and json.print do not work well with composite ke
     for key in dict.keys():
         print(key, ":", dict[key])
         
-# write config to pkl file
+
 def write_config_file(config):
     fn = config['configfile']
     # first remove raw data (legacy)
-    config.pop('raw',None) # remove from dict if exists
-    config.pop('raw_temp',None) # remove from dict if exists
-    config.pop('raw_temp_filtered',None) # remove from dict if exists
-    config.pop('raw_interpolated',None) # remove from dict if exists
-    config.pop('raw_ica',None) # remove from dict if exists
-    config.pop('ica',None) # remove from dict if exists
-    config.pop('file_path',None) # remove from dict, this is the current file_path in loop
-    pickle.dump(config, f)
+    config.pop('raw', None)  # remove from dict if exists
+    config.pop('raw_temp', None)  # remove from dict if exists
+    config.pop('raw_temp_filtered', None)  # remove from dict if exists
+    config.pop('raw_interpolated', None)  # remove from dict if exists
+    config.pop('raw_ica', None)  # remove from dict if exists
+    config.pop('ica', None)  # remove from dict if exists
+    config.pop('file_path', None)  # remove from dict, this is the current file_path in loop
+    with open(fn, 'wb') as f:
+        pickle.dump(config, f)
     return fn
+
 
 def load_config(fn): 
     with open(fn, 'rb') as f:
@@ -502,9 +505,8 @@ def create_dict():  # create initial dict for manual processing
         window.close()
     return
 
+
 # Functions for exporting data
-
-
 def extract_epoch_data(raw_output, epoch_length, selected_indices, sfreq):
     events_out = mne.make_fixed_length_events(
         raw_output, duration=(epoch_length - (1 / sfreq)))
@@ -638,7 +640,8 @@ def create_raw(config):
         sample_frequency = raw.info["sfreq"]
         # update dict
         config['sample_frequency'] = sample_frequency
-    # Set montage for electrodes (provides 3D coordinates for each electrode position, needed for channel interpolation)
+    
+    # All files except .EEG (with .VHDR) require explicit montage setting
     if config['file_pattern'] != "*.vhdr":
         raw.set_montage(montage=montage, on_missing='ignore')
     return raw, config
