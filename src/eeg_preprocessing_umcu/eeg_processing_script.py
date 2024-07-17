@@ -605,29 +605,28 @@ def create_spatial_filter(config):
     return spatial_filter
 
 def create_raw(config):
-    # *** create_raw  ***
+
     if config['file_pattern'] == "*.txt":
         with open(file_path, "r") as file:
             df = pd.read_csv(
                 file, sep='\t', index_col=False, header=0)
-        # get channel names if not yet done
+
         if config['channel_names'] == []:  # only do this once
             ch_names = list(df.columns)
             config['channel_names'] = ch_names
         ch_types = ["eeg"]*len(ch_names)
         info = mne.create_info(
             ch_names=ch_names, sfreq=config['sample_frequency'], ch_types=ch_types)
-        # info = mne.create_info(
-        #     ch_names=ch_names, sfreq=sample_frequency, ch_types=ch_types)
         df = df.iloc[:, 0:len(ch_names)]
         samples = df.T*1e-6  # Scaling from µV to V
-        # Create raw EEG object compatible with MNE functions
         raw = mne.io.RawArray(samples, info)
-        # check for NaN columns and issie warning
+        config['sample_frequency'] = raw.info["sfreq"]
+        
         missing = df.columns[df.isna().any()].tolist()
         if missing != '[]':
             sg.popup_ok('Warning: channels with missing values found:',
                         missing, "please drop these channel(s)!", location=(100, 100),font=font)
+            
     elif config['file_pattern'] == "*.bdf":
         raw = mne.io.read_raw_bdf(file_path, preload=True)
     elif config['file_pattern'] == "*.vhdr":
@@ -635,14 +634,7 @@ def create_raw(config):
     elif config['file_pattern'] == "*.edf":
         raw = mne.io.read_raw_edf(file_path, preload=True)
 
-    # read sample freq from raw
-    if config['file_pattern'] != "*.txt":  # take sfreq from raw
-        sample_frequency = raw.info["sfreq"]
-        # update dict
-        config['sample_frequency'] = sample_frequency
-    
-    # All files except .EEG (with .VHDR) require explicit montage setting
-    if config['file_pattern'] != "*.vhdr":
+    if config['file_pattern'] != "*.vhdr": # Only .EEG files require explicit montage setting
         raw.set_montage(montage=montage, on_missing='ignore')
     return raw, config
 
@@ -652,15 +644,11 @@ def update_channels_to_be_dropped (raw,config):
         channels_to_be_dropped = select_channels_to_be_dropped(
             channel_names)  # ask user to select
         config['channels_to_be_dropped_selected']=1 # *3 skip this
-        # config[file_name, 'channels_to_be_dropped'] = channels_to_be_dropped # store for rerun function
         config['channels_to_be_dropped'] = channels_to_be_dropped # store for rerun function
-    # drop channels_to_be_dropped
     raw.drop_channels(config['channels_to_be_dropped'])
     return raw,config
 
-
 def perform_ica (raw,config):
-    # *** perfom_ica                                      ***
     # ask # components (this is per file)
     msg = 'Max # components = ' + \
         str(config['max_channels'])
@@ -668,8 +656,7 @@ def perform_ica (raw,config):
 
     # Preparation of clean raw object to calculate ICA on
     raw_ica = raw.copy()
-    raw_ica.filter(l_freq=1, h_freq=45,
-                   l_trans_bandwidth=0.5, h_trans_bandwidth=4)
+    raw_ica.filter(l_freq=1, h_freq=45,l_trans_bandwidth=0.5, h_trans_bandwidth=4)
 
     raw_ica.info['bads'] = bad_channels  # *3 read from config
     raw_ica.interpolate_bads(reset_bads=True)
