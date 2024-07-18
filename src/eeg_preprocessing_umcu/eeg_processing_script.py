@@ -52,8 +52,7 @@ layout = [
 
 def print_dict(dict): # pprint and json.print do not work well with composite keys!
     for key in dict.keys():
-        print(key, ":", dict[key])
-        
+        print(key, ":", dict[key])  
 
 def write_config_file(config):
     fn = config['configfile']
@@ -68,7 +67,6 @@ def write_config_file(config):
     with open(fn, 'wb') as f:
         pickle.dump(config, f)
     return fn
-
 
 def load_config(fn): 
     with open(fn, 'rb') as f:
@@ -604,7 +602,7 @@ def create_spatial_filter(config):
                                )  # *2
     return spatial_filter
 
-def create_raw(config):
+def create_raw(config,montage):
 
     if config['file_pattern'] == "*.txt":
         with open(file_path, "r") as file:
@@ -634,21 +632,20 @@ def create_raw(config):
     elif config['file_pattern'] == "*.edf":
         raw = mne.io.read_raw_edf(file_path, preload=True)
 
-    if config['file_pattern'] != "*.vhdr": # Only .EEG files require explicit montage setting
-        raw.set_montage(montage=montage, on_missing='ignore')
+    if config['file_pattern'] != "*.vhdr": # Only .EEG raws already automatically have a montage
+        raw.set_montage(montage = montage, on_missing ='ignore')
     return raw, config
 
 def update_channels_to_be_dropped (raw,config):
-    if config['rerun'] == 0 and config['channels_to_be_dropped_selected'] == 0:  # only in 1st batch if not yet selected
+    if config['channels_to_be_dropped_selected'] == 0: # only in 1st batch if not yet selected
         channel_names = raw.ch_names
         channels_to_be_dropped = select_channels_to_be_dropped(
             channel_names)  # ask user to select
-        config['channels_to_be_dropped_selected']=1 # *3 skip this
+        config['channels_to_be_dropped_selected'] = 1 # *3 skip this
         config['channels_to_be_dropped'] = channels_to_be_dropped # store for rerun function
-    raw.drop_channels(config['channels_to_be_dropped'])
     return raw,config
 
-def perform_ica (raw,config):
+def perform_ica (raw,raw_temp,config):
     # ask # components (this is per file)
     msg = 'Max # components = ' + \
         str(config['max_channels'])
@@ -658,7 +655,7 @@ def perform_ica (raw,config):
     raw_ica = raw.copy()
     raw_ica.filter(l_freq=1, h_freq=45,l_trans_bandwidth=0.5, h_trans_bandwidth=4)
 
-    raw_ica.info['bads'] = bad_channels  # *3 read from config
+    raw_ica.info['bads'] = config[file_name, 'bad']  # *3 read from config
     raw_ica.interpolate_bads(reset_bads=True)
 
     # Fitting the ICA
@@ -695,7 +692,7 @@ def perform_ica (raw,config):
     max_comp = config['nr_ica_components']
     components_to_be_dropped = select_components_to_be_dropped(
         max_comp)
-    config[config['file_name'], 'dropped components'] =components_to_be_dropped
+    config[config['file_name'], 'dropped components'] = components_to_be_dropped
     msg = "Dropped components " + \
           str(components_to_be_dropped)                    # msg = "Dropped components " + components_to_be_dropped
     window['-RUN_INFO-'].update(msg+'\n', append=True)
@@ -704,9 +701,26 @@ def perform_ica (raw,config):
         ica.exclude = components_to_be_dropped
 
     # Apply ICA
-    ica.apply(raw_interp)  # *1 skip if rerun
-    return raw_ica,ica,config
+    ica.apply(raw_temp)  # *1 skip if rerun, nee denk ik!
+    return raw_temp,ica,config
 
+def perform_bad_channels_selection(raw,config):
+    '''
+    Function that applies MNE plotting to interactively select bad channels and save these to the config. These channels
+    can later be interpolated or dropped depending on the needs.
+    '''
+    msg = "Select bad channels bij left-clicking channels"
+    window['-RUN_INFO-'].update(msg+'\n', append=True)
+    raw.plot(n_channels=len(
+        raw.ch_names), block=True, title="Bandpass filtered data")
+    ask_skip_input_file(config)
+
+    # Retrieve the list of bad channels to use during export of the final file
+    config[file_name, 'bad'] = raw.info['bads']  # *1 ### Aparte bad_channels variable is nu weg
+    return raw,config
+
+def perform_average_reference(raw,config):
+    
 
 # start loop
 # window = make_win1()
@@ -775,32 +789,29 @@ while True:  # @noloop remove
     elif event == 'Start processing':
         try:
             # Adjust the file extension as needed to recognize the correct file type
-            montage=mne.channels.make_standard_montage(settings['montage',config['input_file_pattern']])
+            montage = mne.channels.make_standard_montage(settings['montage',config['input_file_pattern']])
             config['file_pattern'] = settings['input_file_pattern',config['input_file_pattern']]
 
             # progess bar vars
             lfl = len(config['input_file_paths'])
             filenum = 0
 
-            # Iterate through each file and open it
             for file_path in config['input_file_paths']:  # @noloop do not execute
-                config['file_path']=file_path # to be used by functions, this is the current file_path
-                # file_path="C:/AgileInzichtShare/Engagements/UMC/Yorben/Nieuwe functies/Bestanden Herman 22022024/Bestanden Herman 22022024/s041_512Hz_64ch_aver_ref.txt"
-                # file name to be used in rerun
-                # update config for rerun function
+                config['file_path'] = file_path # to be used by functions, this is the current file_path
                 f = Path(file_path)
                 file_name = f.name
-                config['file_name']=file_name
-                input_dir=str(f.parents[0]) # to prevent error print config json
-                config['input_directory']=input_dir # save, scope=batch
+                config['file_name'] = file_name
+                input_dir = str(f.parents[0]) # to prevent error print config json
+                config['input_directory'] = input_dir # save, scope=batch
+                
                 # strip file_name for use as sub dir
-                fn=file_name.replace(" ", "")
-                fn=fn.replace(".", "")
-                output_dir=posixpath.join(input_dir, fn ) # this is the sub-dir for output (epoch) files, remove spaces
-                config['output_directory']=output_dir # save
-                # create output sub directory if not existing
+                fn = file_name.replace(" ", "")
+                fn = fn.replace(".", "")
+                output_dir = posixpath.join(input_dir, fn ) # this is the sub-dir for output (epoch) files, remove spaces
+                config['output_directory'] = output_dir # save
                 if not os.path.exists(config['output_directory']):
                    os.makedirs(config['output_directory'])
+                
                 # add file name to list in config file, to be used in rerun
                 config['input_file_names'].append(file_name) # add file name to config file, to be used in rerun
                 msg = '\n************ Processing file ' + file_path + ' ************'
@@ -808,10 +819,12 @@ while True:  # @noloop remove
                 window['-FILE_INFO-'].update(msg+'\n', append=True)
                 
                 # *** create_raw(file_path)                           ***
-                raw,config=create_raw(config)   
+                raw,config = create_raw(config,montage)   
                     
                 # *** update_channels_to_be_dropped                   ***
-                raw,config=update_channels_to_be_dropped (raw,config)
+                if config['rerun'] == 0:
+                    raw,config = update_channels_to_be_dropped (raw,config)
+                raw.drop_channels(config['channels_to_be_dropped'])
                 
                 # Temporary raw file to work with during preprocessing, raw is used to finally export epochs
                 raw_temp = raw.copy()
@@ -831,20 +844,14 @@ while True:  # @noloop remove
                 fig.canvas.draw()
 
                 # Filter before dropping bad channels
-                raw_temp.filter(
-                    l_freq=0.5, h_freq=45, l_trans_bandwidth=0.25, h_trans_bandwidth=4, picks='eeg')
-
-                # Select bad channels interactively
-                msg = "Select bad channels bij left-clicking channels"
-                window['-RUN_INFO-'].update(msg+'\n', append=True)
-                raw_temp.plot(n_channels=len(
-                    raw.ch_names), block=True, title="Bandpass filtered data")
-                ask_skip_input_file(config)
-
-                # Retrieve the list of bad channels to use during export of the final file
-                bad_channels = raw_temp.info['bads']  # *1
-                config[file_name, 'bad'] = bad_channels  # store for rerun function
-
+                raw_temp.filter(l_freq=0.5, h_freq=45, l_trans_bandwidth=0.25, h_trans_bandwidth=4, picks='eeg')
+                
+                if config['rerun'] == 0:
+                    raw_temp,config = perform_bad_channels_selection(raw_temp, config)
+                else:
+                    raw_temp.info['bads'] = config[file_name, 'bad']
+                raw_temp.interpolate_bads(reset_bads=True) 
+                
                 # ask_skip_input_file(config)
                 if config['skip_input_file'] == 1:
                     msg = 'File ' + file_path + ' skipped'
@@ -855,19 +862,16 @@ while True:  # @noloop remove
                 
                 # # *** perfom_ica                                      ***
                 if config['apply_ica']:
-                    raw_ica,ica,config=perform_ica(raw,config)
+                    raw_temp,ica,config = perform_ica(raw, raw_temp, config)
                 
 
-                # Interpolate or drop bad channels
-                raw_interp = raw_temp.copy()
-                raw_interp.interpolate_bads(
-                    reset_bads=True)  # *3 712 t/m 754 skip
+                # *3 712 t/m 754 skip
 
                 # *3 812 t/m 869 skip if rerun
                 # For beamforming, interpolated channels need to be dropped first
                 if config['apply_beamformer']:
                     raw_beamform = raw_interp.copy()
-                    raw_beamform.drop_channels(bad_channels)
+                    raw_beamform.drop_channels(config[file_name, 'bad'])
                     msg = "channels left in raw_beamform: " + \
                         str(len(raw_beamform.ch_names))
                     window['-RUN_INFO-'].update(msg+'\n', append=True)
@@ -935,13 +939,13 @@ while True:  # @noloop remove
                 # Preparation of the final raw file and epochs for export
 
                 # Apply the chosen bad channels to the output raw object(s)
-                raw.info['bads'] = bad_channels  # extra write #*1
-                config[file_name, 'bad'] = bad_channels  # *1 rewrite ??
+                raw.info['bads'] = config[file_name, 'bad']  # extra write #*1
+                config[file_name, 'bad'] = config[file_name, 'bad']  # *1 rewrite ??
 
                 # Interpolate bad channels on the second Raw object
                 raw.interpolate_bads(reset_bads=True)
                 msg = "Interpolated " + \
-                    str(len(bad_channels)) + \
+                    str(len(config[file_name, 'bad'])) + \
                     " channels on (non-beamformed) output signal"
                 window['-RUN_INFO-'].update(msg+'\n', append=True)
 
@@ -969,9 +973,9 @@ while True:  # @noloop remove
                 # Copy exported raw object before applying possible downsampling
                 if config['apply_beamformer']:
                     raw_beamform_output = raw.copy()
-                    raw_beamform_output.drop_channels(bad_channels)
+                    raw_beamform_output.drop_channels(config[file_name, 'bad'])
                     msg = "Dropped " + \
-                        str(len(bad_channels)) + \
+                        str(len(config[file_name, 'bad'])) + \
                         " bad channels on beamformed output signal"
                     window['-RUN_INFO-'].update(msg+'\n', append=True)
                     msg = "The EEG file used for beamforming now contains " + \
