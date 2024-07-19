@@ -530,7 +530,7 @@ def save_epoch_data_to_txt(config,epoch_data, file_suffix, scalings):
         progress_bar2.UpdateBar(i+1)
         
 
-def create_spatial_filter(config):
+def create_spatial_filter(raw_b,config):
     fs_dir = fetch_fsaverage(verbose=True)
     subjects_dir = os.path.dirname(fs_dir)
     subject = "fsaverage"
@@ -564,7 +564,7 @@ def create_spatial_filter(config):
 
     # Forward Solution
     fwd = mne.make_forward_solution(
-        raw_beamform.info,
+        raw_b.info,
         trans=trans,
         src=src,
         bem=bem,
@@ -575,7 +575,7 @@ def create_spatial_filter(config):
 
     # Inverse Problem
     # covariance matrix
-    data_cov = mne.compute_raw_covariance(raw_beamform)
+    data_cov = mne.compute_raw_covariance(raw_b)
 
     # noise covariance matrix
     # Create a new matrix noise_matrix with the same size as data_cov
@@ -591,7 +591,7 @@ def create_spatial_filter(config):
                                )
 
     # LCMV beamformer
-    spatial_filter = make_lcmv(raw_beamform.info,
+    spatial_filter = make_lcmv(raw_b.info,
                                fwd,
                                data_cov,
                                reg=0.05,
@@ -637,12 +637,9 @@ def create_raw(config,montage):
     return raw, config
 
 def update_channels_to_be_dropped (raw,config):
-    if config['channels_to_be_dropped_selected'] == 0: # only in 1st batch if not yet selected
-        channel_names = raw.ch_names
-        channels_to_be_dropped = select_channels_to_be_dropped(
-            channel_names)  # ask user to select
-        config['channels_to_be_dropped_selected'] = 1 # *3 skip this
-        config['channels_to_be_dropped'] = channels_to_be_dropped # store for rerun function
+    channel_names = raw.ch_names
+    channels_to_be_dropped = select_channels_to_be_dropped(channel_names)  # ask user to select
+    config['channels_to_be_dropped'] = channels_to_be_dropped # store for rerun function
     return raw,config
 
 def perform_ica (raw,raw_temp,config):
@@ -719,8 +716,16 @@ def perform_bad_channels_selection(raw,config):
     config[file_name, 'bad'] = raw.info['bads']  # *1 ### Aparte bad_channels variable is nu weg
     return raw,config
 
-def perform_average_reference(raw,config):
-    
+def plot_power_spectrum(raw, filtered=False):
+    fig = raw.compute_psd(fmax=60).plot(
+        picks='eeg', exclude=[])
+    axes = fig.get_axes()
+    if filtered:
+        axes[0].set_title("Band 0.5-45 Hz filtered power spectrum.")
+    else:
+        axes[0].set_title("Unfiltered power spectrum")
+    fig.tight_layout(rect=[0, 0, 1, 0.95])
+    fig.canvas.draw()    
 
 # start loop
 # window = make_win1()
@@ -822,41 +827,35 @@ while True:  # @noloop remove
                 raw,config = create_raw(config,montage)   
                     
                 # *** update_channels_to_be_dropped                   ***
-                if config['rerun'] == 0:
+                if config['rerun'] == 0 and config['channels_to_be_dropped_selected'] == 0:
                     raw,config = update_channels_to_be_dropped (raw,config)
+                    config['channels_to_be_dropped_selected'] = 1
                 raw.drop_channels(config['channels_to_be_dropped'])
+                
+                # determine max nr_channels (= upper limit of nr_components) @@@
+                max_channels = len(raw.ch_names)-3  # @@@ check
+                config['max_channels'] = int(max_channels)
                 
                 # Temporary raw file to work with during preprocessing, raw is used to finally export epochs
                 raw_temp = raw.copy()
-                config['raw_temp'] = raw_temp
+                config['raw_temp'] = raw_temp ## Nog nodig?
 
-                # determine max nr_channels (= upper limit of nr_components) @@@
-                max_channels = len(raw.ch_names)-1  # @@@ check
-                # store for later use
-                config['max_channels'] = int(max_channels)
+                plot_power_spectrum(raw_temp, filtered=False)
 
-                # Plot power spectrum
-                fig = raw_temp.compute_psd(fmax=60).plot(
-                    picks="eeg")  # Plot raw power spectrum
-                axes = fig.get_axes()
-                axes[0].set_title("Unfiltered power spectrum")
-                fig.tight_layout(rect=[0, 0, 1, 0.95])
-                fig.canvas.draw()
-
-                # Filter before dropping bad channels
-                raw_temp.filter(l_freq=0.5, h_freq=45, l_trans_bandwidth=0.25, h_trans_bandwidth=4, picks='eeg')
-                
+                raw_temp.filter(l_freq=0.5, h_freq=45, l_trans_bandwidth=0.25, \
+                                h_trans_bandwidth=4, picks='eeg')
+                    
                 if config['rerun'] == 0:
                     raw_temp,config = perform_bad_channels_selection(raw_temp, config)
                 else:
                     raw_temp.info['bads'] = config[file_name, 'bad']
                 raw_temp.interpolate_bads(reset_bads=True) 
                 
-                # ask_skip_input_file(config)
+                # ask_skip_input_file(config) to allow user to skip current EEG file
                 if config['skip_input_file'] == 1:
                     msg = 'File ' + file_path + ' skipped'
                     window['-FILE_INFO-'].update(msg+'\n', append=True)
-                    filenum = filenum+1
+                    filenum += 1
                     progress_bar.UpdateBar(filenum, lfl)
                     continue
                 
@@ -864,60 +863,45 @@ while True:  # @noloop remove
                 if config['apply_ica']:
                     raw_temp,ica,config = perform_ica(raw, raw_temp, config)
                 
-
-                # *3 712 t/m 754 skip
-
-                # *3 812 t/m 869 skip if rerun
                 # For beamforming, interpolated channels need to be dropped first
                 if config['apply_beamformer']:
-                    raw_beamform = raw_interp.copy()
+                    raw_beamform = raw_temp.copy()
                     raw_beamform.drop_channels(config[file_name, 'bad'])
                     msg = "channels left in raw_beamform: " + \
                         str(len(raw_beamform.ch_names))
                     window['-RUN_INFO-'].update(msg+'\n', append=True)
-
-                # Downsample to 250 or 256 Hz to facilitate quick processing (if not beamforming)
-                if not config['apply_beamformer']:
-                    if config['sample_frequency'] % 256 == 0:
-                        raw_resample_f = 256
-                    else:
-                        raw_resample_f = 250
-                    raw_interp.resample(raw_resample_f, npad="auto")
-                else:
-                    raw_resample_f = config['sample_frequency']
-
-                # Plot power spectrum again
-                fig2 = raw_interp.compute_psd(fmax=60).plot(
-                    picks='eeg', exclude=[])  # Plot filtered power spectrum
-                axes2 = fig2.get_axes()
-                axes2[0].set_title(
-                    "Band 0.5-45 Hz filtered power spectrum. FIR transition bandwidths 0.25 and 4 Hz resp.")
-                fig2.tight_layout(rect=[0, 0, 1, 0.95])
-                fig2.canvas.draw()
-
-                # Set average reference
-                raw_interp.set_eeg_reference(
-                    'average', projection=True, ch_type='eeg')
-                raw_interp.apply_proj()  # Apply the average reference as a projector
-                if config['apply_beamformer']:
-                    raw_beamform.set_eeg_reference(
-                        'average', projection=True, ch_type='eeg')
+                    raw_beamform.set_eeg_reference('average', projection=True, ch_type='eeg')
                     raw_beamform.apply_proj()
+
+                # # Downsample to 250 or 256 Hz to facilitate quick processing (if not beamforming)
+                # if not config['apply_beamformer']:
+                #     temporary_sample_f = 256 if config['sample_frequency'] % 256 == 0 else 250
+                #     print("temp. sample fr: ", temporary_sample_f)
+                #     raw_interp.resample(temporary_sample_f, npad="auto")
+                # else:
+                #     temporary_sample_f = config['sample_frequency'] # Results in no down sampling
+                # Downsample to 250 or 256 Hz to facilitate quick preprocessing
                 
+                temporary_sample_f = 256 if config['sample_frequency'] % 256 == 0 else 250
+                print("temp. sample fr: ", temporary_sample_f)
+                raw_temp.resample(temporary_sample_f, npad="auto")
+                
+                plot_power_spectrum(raw_temp, filtered=True)
+
+                raw_temp.set_eeg_reference('average', projection=True, ch_type='eeg')
+                raw_temp.apply_proj()
 
                 if config['apply_epoch_selection']:
                     # Cut epochs
-                    events = mne.make_fixed_length_events(raw_interp, duration=(
-                        config['epoch_length']-(1/raw_resample_f)))  # Create epoch starting points
-                    epochs = mne.Epochs(raw_interp, events=events, tmin=0, tmax=(
-                        config['epoch_length']-(1/raw_resample_f)), baseline=(0, config['epoch_length']))
+                    events = mne.make_fixed_length_events(raw_temp, duration=(config['epoch_length']))
+                    epochs = mne.Epochs(raw_temp, events=events, tmin=0, tmax=(
+                        config['epoch_length']-(1/temporary_sample_f)), baseline=(0, config['epoch_length']))
 
-                    # Generate events at each second
-                    # One event ID for each second
+                    # Generate events at each second as seconds markers
                     time_event_ids = np.arange(
                         config['epoch_length']*len(events))
                     time_event_samples = (
-                        raw_resample_f * time_event_ids).astype(int)
+                        temporary_sample_f * time_event_ids).astype(int)
                     time_events = np.column_stack(
                         (time_event_samples, np.zeros_like(time_event_samples), time_event_ids))
 
@@ -928,13 +912,14 @@ while True:  # @noloop remove
                         raw.ch_names), events=time_events, block=True, picks=['eeg', 'eog', 'ecg'])
 
                     # Retrieve the indices of the selected epochs to use during export of the final files
-                    selected_indices = epochs.selection  # *1
-                    # *1 rewrite ??
-                    config[file_name, 'epochs'] = selected_indices
-                    # *3 812 t/m 869 skip if rerun
+                    config[file_name, 'epochs'] = epochs.selection  # *1
 
-                if config['apply_beamformer']:  # naar apart func t/m 884 #*2
-                    spatial_filter = create_spatial_filter(config)
+                if config['apply_beamformer']:
+                    spatial_filter = create_spatial_filter(raw_beamform,config)
+
+
+
+
 
                 # Preparation of the final raw file and epochs for export
 
@@ -1004,7 +989,7 @@ while True:  # @noloop remove
                     # Apply beamformer again to export raw object
                     stc = apply_lcmv_raw(raw_beamform_output, spatial_filter)
                     info = mne.create_info(
-                        ch_names=desikan_channel_names, sfreq=config['sample_frequency'], ch_types='eeg')
+                        ch_names = desikan_channel_names, sfreq = config['sample_frequency'], ch_types='eeg')
                     rawSource = mne.io.RawArray(stc.data, info)
                     rawSource.resample(
                         downsampled_sample_frequency, npad="auto")
@@ -1016,7 +1001,7 @@ while True:  # @noloop remove
                 if config['apply_epoch_selection']:  # rename to epoch_output #*3
                     # *3 load selected_indces from  fig
                     selected_epochs_out = extract_epoch_data(
-                        raw, config['epoch_length'], selected_indices, downsampled_sample_frequency)
+                        raw, config['epoch_length'], config[file_name, 'epochs'], downsampled_sample_frequency)
                     # config[selected_indices] #*1
 
                     len2 = len(selected_epochs_out)
@@ -1027,7 +1012,7 @@ while True:  # @noloop remove
                     if config['apply_beamformer']:
                         # Export beamformed epochs
                         epoch_data_source = extract_epoch_data(
-                            rawSource, config['epoch_length'], selected_indices, downsampled_sample_frequency)
+                            rawSource, config['epoch_length'], config[file_name, 'epochs'], downsampled_sample_frequency)
                         save_epoch_data_to_txt(config, epoch_data_source, "_Source_level_", dict(
                             eeg=1, mag=1e15, grad=1e13))
 
