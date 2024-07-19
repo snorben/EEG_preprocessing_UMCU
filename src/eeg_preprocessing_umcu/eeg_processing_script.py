@@ -717,6 +717,10 @@ def perform_bad_channels_selection(raw,config):
     return raw,config
 
 def plot_power_spectrum(raw, filtered=False):
+    '''
+    Plot the power spectrum of the separate EEG channels
+    of either the unfiltered or filtered EEG from 0-60 Hz.
+    '''
     fig = raw.compute_psd(fmax=60).plot(
         picks='eeg', exclude=[])
     axes = fig.get_axes()
@@ -725,7 +729,22 @@ def plot_power_spectrum(raw, filtered=False):
     else:
         axes[0].set_title("Unfiltered power spectrum")
     fig.tight_layout(rect=[0, 0, 1, 0.95])
-    fig.canvas.draw()    
+    fig.canvas.draw()   
+    
+def perform_temp_down_sampling(raw,config):
+    '''
+    Down sample the temporary raw EEG to 250 or 256 Hz depending on the sample frequency
+    (power of 2 or not).
+    '''
+    temporary_sample_f = 256 if config['sample_frequency'] % 256 == 0 else 250
+    print("temp. sample fr: ", temporary_sample_f)
+    raw.resample(temporary_sample_f, npad="auto")
+    return raw
+    
+def perform_average_reference(raw):
+    raw.set_eeg_reference('average', projection=True, ch_type='eeg')
+    raw.apply_proj()
+    return raw
 
 # start loop
 # window = make_win1()
@@ -870,26 +889,13 @@ while True:  # @noloop remove
                     msg = "channels left in raw_beamform: " + \
                         str(len(raw_beamform.ch_names))
                     window['-RUN_INFO-'].update(msg+'\n', append=True)
-                    raw_beamform.set_eeg_reference('average', projection=True, ch_type='eeg')
-                    raw_beamform.apply_proj()
-
-                # # Downsample to 250 or 256 Hz to facilitate quick processing (if not beamforming)
-                # if not config['apply_beamformer']:
-                #     temporary_sample_f = 256 if config['sample_frequency'] % 256 == 0 else 250
-                #     print("temp. sample fr: ", temporary_sample_f)
-                #     raw_interp.resample(temporary_sample_f, npad="auto")
-                # else:
-                #     temporary_sample_f = config['sample_frequency'] # Results in no down sampling
-                # Downsample to 250 or 256 Hz to facilitate quick preprocessing
+                    raw_beamform = perform_average_reference(raw_beamform)
                 
-                temporary_sample_f = 256 if config['sample_frequency'] % 256 == 0 else 250
-                print("temp. sample fr: ", temporary_sample_f)
-                raw_temp.resample(temporary_sample_f, npad="auto")
+                perform_temp_down_sampling(raw_temp,config)
                 
                 plot_power_spectrum(raw_temp, filtered=True)
 
-                raw_temp.set_eeg_reference('average', projection=True, ch_type='eeg')
-                raw_temp.apply_proj()
+                raw_temp = perform_average_reference(raw_temp)
 
                 if config['apply_epoch_selection']:
                     # Cut epochs
