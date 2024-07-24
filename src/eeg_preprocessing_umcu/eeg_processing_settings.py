@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Created on Wed May  1 09:56:45 2024
-# test Herman
+# x
 @author: hvand
 """
 import mne
