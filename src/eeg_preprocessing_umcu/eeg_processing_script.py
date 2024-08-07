@@ -504,30 +504,6 @@ def create_dict():  # create initial dict for manual processing
     return
 
 
-# Functions for exporting data
-def extract_epoch_data(raw_output, epoch_length, selected_indices, sfreq):
-    events_out = mne.make_fixed_length_events(raw_output, duration=epoch_length)
-    epochs_out = mne.Epochs(raw_output, events=events_out, tmin=0, tmax=(epoch_length - (1 / sfreq)),
-                            baseline=(0, epoch_length))
-    selected_epochs_out = epochs_out[selected_indices]
-    selected_epochs_out.drop_bad()
-    return selected_epochs_out
-
-
-def save_epoch_data_to_txt(config,epoch_data, file_suffix, scalings):
-    for i in range(len(epoch_data)):
-        epoch_df = epoch_data[i].to_data_frame(picks='eeg', scalings=scalings)
-        epoch_df = epoch_df.drop(columns=['time', 'condition', 'epoch'])
-        epoch_df = np.round(epoch_df, decimals=4)
-        file_name = os.path.basename(
-            root) + file_suffix + "Epoch" + str(i + 1) + ".txt"
-        file_name_out = os.path.join(config['output_directory'], file_name)
-        epoch_df.to_csv(file_name_out, sep='\t', index=False)
-
-        msg = 'Output file ' + file_name_out + ' created'
-        window['-FILE_INFO-'].update(msg+'\n', append=True)
-        progress_bar2.UpdateBar(i+1)
-        
 
 def create_spatial_filter(raw_b,config):
     '''
@@ -782,7 +758,7 @@ def perform_epoch_selection(raw,config):
         (time_event_samples, np.zeros_like(time_event_samples), time_event_ids))
 
     # Plot the epochs for visual inspection
-    msg = "Select bad epochs bij left-clicking data"
+    msg = "Select bad epochs by left-clicking data"
     window['-RUN_INFO-'].update(msg+'\n', append=True)
     epochs.plot(n_epochs=1, n_channels=len(
         raw.ch_names), events=time_events, event_color= 'm',block=True, picks=['eeg', 'eog', 'ecg'])
@@ -790,8 +766,65 @@ def perform_epoch_selection(raw,config):
     config[file_name, 'epochs'] = epochs.selection  # *1
     return config
     
+ 
+def apply_epoch_selection(raw_output,config,sfreq):
+    '''
+    Function that applies the epoch selection made earlier (either in a previous run
+    or during current pre processing) to the raw EEG used for saving output to file.
+    '''
+    events_out = mne.make_fixed_length_events(raw_output, duration=config['epoch_length'])
+    epochs_out = mne.Epochs(raw_output, events=events_out, tmin=0, tmax=(config['epoch_length'] - \
+        (1 / sfreq)), baseline=(0, config['epoch_length']))
+    selected_epochs_out = epochs_out[config[file_name, 'epochs']]
+    selected_epochs_out.drop_bad()
+    return selected_epochs_out
 
 
+def save_epoch_data_to_txt(config, epoch_data, file_suffix, scalings):
+    '''
+    Function that loops over the selected epochs and saves each epoch to a separate .txt file.
+    '''
+    for i in range(len(epoch_data)):
+        epoch_df = epoch_data[i].to_data_frame(picks='eeg', scalings=scalings)
+        epoch_df = epoch_df.drop(columns=['time', 'condition', 'epoch'])
+        epoch_df = np.round(epoch_df, decimals=4)
+        file_name = os.path.basename(
+            root) + file_suffix + "Epoch" + str(i + 1) + ".txt"
+        file_name_out = os.path.join(config['output_directory'], file_name)
+        epoch_df.to_csv(file_name_out, sep='\t', index=False)
+
+        msg = 'Output file ' + file_name_out + ' created'
+        window['-FILE_INFO-'].update(msg+'\n', append=True)
+        progress_bar2.UpdateBar(i+1)
+
+def apply_bad_channels(raw,config):
+    '''
+    Function that applies bad channels (either from previous run or current pre processing)
+    to raw EEG object used to export the final output.
+    '''
+    raw.info['bads'] = config[file_name, 'bad']
+    raw.interpolate_bads(reset_bads=True)
+    msg = "Interpolated " + str(len(config[file_name, 'bad'])) + \
+        " channels on (non-beamformed) output signal"
+    window['-RUN_INFO-'].update(msg+'\n', append=True)
+    return raw
+    
+def apply_spatial_filter(raw, config, spatial_filter):
+    '''
+    Function that applies the spatial filter created earlier to the final 
+    raw EEG object used to export the final output.
+    '''
+    desikanlabels = pd.read_csv('DesikanVoxLabels.csv', header=None)
+    desikan_channel_names = desikanlabels[0].tolist()
+    stc = apply_lcmv_raw(raw, spatial_filter)
+    info = mne.create_info(
+        ch_names = desikan_channel_names, sfreq = config['sample_frequency'], ch_types='eeg')
+    raw_source = mne.io.RawArray(stc.data, info)
+    raw_source.resample(config['sample_frequency']//config['downsample_factor'], npad="auto")
+    msg = "Beamformed output signal downsampled to " + \
+          str(config['sample_frequency']//config['downsample_factor']) + " Hz"
+    window['-RUN_INFO-'].update(msg+'\n', append=True)
+    return raw_source
 
 # start loop
 # window = make_win1()
@@ -945,15 +978,10 @@ while True:  # @noloop remove
                     config = perform_epoch_selection(raw,config)
 
 
-                # ********** Preparation of the final raw file and epochs for export **********
 
-                # Apply the chosen bad channels to the output raw object(s)
-                raw.info['bads'] = config[file_name, 'bad']  # extra write #*1
-                raw.interpolate_bads(reset_bads=True)
-                msg = "Interpolated " + \
-                    str(len(config[file_name, 'bad'])) + \
-                    " channels on (non-beamformed) output signal"
-                window['-RUN_INFO-'].update(msg+'\n', append=True)
+
+                # ********** Preparation of the final raw file and epochs for export **********                
+                raw = apply_bad_channels(raw,config)
                 
                 # config[file_name, 'bad'] = config[file_name, 'bad']  # *1 rewrite ??
 
@@ -1000,38 +1028,22 @@ while True:  # @noloop remove
                 # Split the file path and extension to use when constructing the output file names
                 root, ext = os.path.splitext(file_path)
 
-                if config['apply_beamformer']:
-                    # Load Desikan area labels for source channel names
-                    desikanlabels = pd.read_csv('DesikanVoxLabels.csv', header=None)
-                    desikan_channel_names = desikanlabels[0].tolist()
-
-                    # Apply beamformer again to export raw object
-                    stc = apply_lcmv_raw(raw_beamform_output, spatial_filter)
-                    info = mne.create_info(
-                        ch_names = desikan_channel_names, sfreq = config['sample_frequency'], ch_types='eeg')
-                    rawSource = mne.io.RawArray(stc.data, info)
-                    rawSource.resample(downsampled_sample_frequency, npad="auto")
-                    msg = "Beamformed output signal downsampled to " + \
-                          str(downsampled_sample_frequency) + " Hz"
-                    window['-RUN_INFO-'].update(msg+'\n', append=True)
-
-                # Create output epochs and export to .txt (non-beamformed)
+                # Create output epochs and export to .txt
                 if config['apply_epoch_selection']:  # rename to epoch_output #*3
                     # *3 load selected_indces from  fig
-                    selected_epochs_out = extract_epoch_data(
-                        raw, config['epoch_length'], config[file_name, 'epochs'], downsampled_sample_frequency)
+                    selected_epochs_sensor = apply_epoch_selection(raw, config, downsampled_sample_frequency)
                     # config[selected_indices] #*1
 
-                    len2 = len(selected_epochs_out)
+                    len2 = len(selected_epochs_sensor)
                     progress_bar2.UpdateBar(0, len2)
-                    #(config,epoch_data, file_suffix, scalings)
-                    save_epoch_data_to_txt(config, selected_epochs_out, "_Sensor_level_", None)
+
+                    save_epoch_data_to_txt(config, selected_epochs_sensor, "_Sensor_level_", None)
 
                     if config['apply_beamformer']:
                         # Export beamformed epochs
-                        epoch_data_source = extract_epoch_data(
-                            rawSource, config['epoch_length'], config[file_name, 'epochs'], downsampled_sample_frequency)
-                        save_epoch_data_to_txt(config, epoch_data_source, "_Source_level_", dict(
+                        raw_source = apply_spatial_filter(raw_beamform_output, config, spatial_filter)
+                        selected_epochs_source = apply_epoch_selection(raw_source, config, downsampled_sample_frequency)
+                        save_epoch_data_to_txt(config, selected_epochs_source, "_Source_level_", dict(
                             eeg=1, mag=1e15, grad=1e13))
 
                 else:  # = no epoch_output
@@ -1056,7 +1068,7 @@ while True:  # @noloop remove
                     progress_bar2.UpdateBar(1, 1) # epochs
 
                     if config['apply_beamformer']:
-                        rawSource_df = rawSource.to_data_frame(
+                        rawSource_df = raw_source.to_data_frame(
                             picks='eeg', scalings=dict(eeg=1, mag=1e15, grad=1e13))
                         # Drop first (time) column
                         rawSource_df = rawSource_df.iloc[:, 1:]
