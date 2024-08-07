@@ -506,8 +506,7 @@ def create_dict():  # create initial dict for manual processing
 
 # Functions for exporting data
 def extract_epoch_data(raw_output, epoch_length, selected_indices, sfreq):
-    events_out = mne.make_fixed_length_events(
-        raw_output, duration=epoch_length)
+    events_out = mne.make_fixed_length_events(raw_output, duration=epoch_length)
     epochs_out = mne.Epochs(raw_output, events=events_out, tmin=0, tmax=(epoch_length - (1 / sfreq)),
                             baseline=(0, epoch_length))
     selected_epochs_out = epochs_out[selected_indices]
@@ -767,7 +766,32 @@ def perform_beamform(raw,config):
     raw = perform_average_reference(raw)
     spatial_filter = create_spatial_filter(raw,config)
     return spatial_filter
+
+def perform_epoch_selection(raw,config):
+    '''
+    Function that performs epoch selection on the raw file. This function is for use on the temporary raw object.
+    '''
+    events = mne.make_fixed_length_events(raw, duration=(config['epoch_length']))
+    epochs = mne.Epochs(raw, events=events, tmin=0, tmax=(
+        config['epoch_length']-(1/temporary_sample_f)), baseline=(0, config['epoch_length']), preload=True)
+
+    # Generate events at each second as seconds markers for the epochs plot
+    time_event_ids = np.arange(config['epoch_length']*len(events))
+    time_event_samples = (temporary_sample_f * time_event_ids).astype(int)
+    time_events = np.column_stack(
+        (time_event_samples, np.zeros_like(time_event_samples), time_event_ids))
+
+    # Plot the epochs for visual inspection
+    msg = "Select bad epochs bij left-clicking data"
+    window['-RUN_INFO-'].update(msg+'\n', append=True)
+    epochs.plot(n_epochs=1, n_channels=len(
+        raw.ch_names), events=time_events, event_color= 'm',block=True, picks=['eeg', 'eog', 'ecg'])
+
+    config[file_name, 'epochs'] = epochs.selection  # *1
+    return config
     
+
+
 
 # start loop
 # window = make_win1()
@@ -885,7 +909,8 @@ while True:  # @noloop remove
 
                 raw_temp.filter(l_freq=0.5, h_freq=45, l_trans_bandwidth=0.25, \
                                 h_trans_bandwidth=4, picks='eeg')
-                    
+                
+                # To ensure bad channels are reloaded during a rerun:
                 if config['rerun'] == 1:
                     raw_temp.info['bads'] = config[file_name, 'bad']
                     
@@ -917,29 +942,7 @@ while True:  # @noloop remove
                 raw_temp = perform_average_reference(raw_temp)
 
                 if config['apply_epoch_selection'] and config['rerun'] == 0:
-                    events = mne.make_fixed_length_events(raw_temp, duration=(config['epoch_length']))
-                    epochs = mne.Epochs(raw_temp, events=events, tmin=0, tmax=(
-                        config['epoch_length']-(1/temporary_sample_f)), baseline=(0, config['epoch_length']), preload=True)
-
-                    # Generate events at each second as seconds markers for the plot
-                    time_event_ids = np.arange(
-                        config['epoch_length']*len(events))
-                    time_event_samples = (
-                        temporary_sample_f * time_event_ids).astype(int)
-                    time_events = np.column_stack(
-                        (time_event_samples, np.zeros_like(time_event_samples), time_event_ids))
-                    
-                    # Plot the epochs for visual inspection
-                    msg = "Select bad epochs bij left-clicking data"
-                    window['-RUN_INFO-'].update(msg+'\n', append=True)
-                    epochs.plot(n_epochs=1, n_channels=len(
-                        raw.ch_names), events=time_events, event_color= 'm',block=True, picks=['eeg', 'eog', 'ecg'])
-                    
-                    config[file_name, 'epochs'] = epochs.selection  # *1
-                    
-                # if config['rerun'] == 1:
-                #     epochs.selection = config[file_name, 'epochs']
-
+                    config = perform_epoch_selection(raw,config)
 
 
                 # ********** Preparation of the final raw file and epochs for export **********
@@ -977,8 +980,7 @@ while True:  # @noloop remove
                 if config['apply_beamformer']:
                     raw_beamform_output = raw.copy()
                     raw_beamform_output.drop_channels(config[file_name, 'bad'])
-                    msg = "Dropped " + \
-                        str(len(config[file_name, 'bad'])) + \
+                    msg = "Dropped " + str(len(config[file_name, 'bad'])) + \
                         " bad channels on beamformed output signal"
                     window['-RUN_INFO-'].update(msg+'\n', append=True)
                     msg = "The EEG file used for beamforming now contains " + \
