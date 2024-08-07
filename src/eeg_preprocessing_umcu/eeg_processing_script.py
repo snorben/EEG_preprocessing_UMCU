@@ -531,6 +531,9 @@ def save_epoch_data_to_txt(config,epoch_data, file_suffix, scalings):
         
 
 def create_spatial_filter(raw_b,config):
+    '''
+    Function used to create a spatial filter for the LCMV beamforming method. The MNE function make_lcmv is used.
+    '''
     fs_dir = fetch_fsaverage(verbose=True)
     subjects_dir = os.path.dirname(fs_dir)
     subject = "fsaverage"
@@ -603,6 +606,12 @@ def create_spatial_filter(raw_b,config):
     return spatial_filter
 
 def create_raw(config,montage):
+    '''
+    Function used to load a raw EEG file using the correct MNE function based on the file type that has to be
+    loaded (.txt, .bdf, .eeg or .edf). Note: for .eeg files the header (.vhdr) is primarily loaded by MNE. For
+    non-.eeg files, the electrode montage is also set, supplying spatial coordinates needed for interpolation
+    and beamforming of the EEG. For .eeg files, this information is already read from the header file.
+    '''
 
     if config['file_pattern'] == "*.txt":
         with open(file_path, "r") as file:
@@ -717,8 +726,8 @@ def perform_bad_channels_selection(raw,config):
 
 def plot_power_spectrum(raw, filtered=False):
     '''
-    Plot the power spectrum of the separate EEG channels
-    of either the unfiltered or filtered EEG from 0-60 Hz.
+    Function that plots the power spectrum of the separate EEG channels
+    of either the unfiltered or filtered EEG (from 0-60 Hz).
     '''
     fig = raw.compute_psd(fmax=60).plot(
         picks='eeg', exclude=[])
@@ -732,8 +741,8 @@ def plot_power_spectrum(raw, filtered=False):
     
 def perform_temp_down_sampling(raw,config):
     '''
-    Down sample the temporary raw EEG to 250 or 256 Hz depending on the sample frequency
-    (power of 2 or not).
+    Function that down samples the temporary raw EEG to 250 or 256 Hz depending on the sample frequency
+    (power of 2 or not). This should speed up preprocessing.
     '''
     temporary_sample_f = 256 if config['sample_frequency'] % 256 == 0 else 250
     print("temp. sample fr: ", temporary_sample_f)
@@ -742,12 +751,24 @@ def perform_temp_down_sampling(raw,config):
     
 def perform_average_reference(raw):
     '''
-    Apply average reference on the 'eeg' type channels of the raw EEG.
+    Function that applies a global average reference on the 'eeg' type channels of the raw EEG.
     '''
     raw.set_eeg_reference('average', projection=True, ch_type='eeg')
     raw.apply_proj()
     return raw
 
+def perform_beamform(raw,config):
+    '''
+    Function that drops bad channels and creates the spatial filter used for LCMV beamforming.
+    '''
+    raw.drop_channels(config[file_name, 'bad'])
+    msg = "channels left in raw_beamform: " + \
+        str(len(raw_beamform.ch_names))
+    window['-RUN_INFO-'].update(msg+'\n', append=True)
+    raw = perform_average_reference(raw)
+    spatial_filter = create_spatial_filter(raw,config)
+    return spatial_filter
+    
 
 # start loop
 # window = make_win1()
@@ -887,13 +908,8 @@ while True:  # @noloop remove
                     raw_temp,ica,config = perform_ica(raw, raw_temp, config)
                 
                 if config['apply_beamformer']:
-                    raw_beamform = raw_temp.copy()
-                    raw_beamform.drop_channels(config[file_name, 'bad'])
-                    msg = "channels left in raw_beamform: " + \
-                        str(len(raw_beamform.ch_names))
-                    window['-RUN_INFO-'].update(msg+'\n', append=True)
-                    raw_beamform = perform_average_reference(raw_beamform)
-                    spatial_filter = create_spatial_filter(raw_beamform,config)
+                    spatial_filter = perform_beamform(raw_temp,config)
+                
                 
                 raw_temp,temporary_sample_f = perform_temp_down_sampling(raw_temp,config)
                 
