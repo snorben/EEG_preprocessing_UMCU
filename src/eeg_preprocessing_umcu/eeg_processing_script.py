@@ -762,8 +762,7 @@ def perform_beamform(raw,config):
     Function that drops bad channels and creates the spatial filter used for LCMV beamforming.
     '''
     raw.drop_channels(config[file_name, 'bad'])
-    msg = "channels left in raw_beamform: " + \
-        str(len(raw_beamform.ch_names))
+    msg = "channels left in raw_beamform: " + str(len(raw.ch_names))
     window['-RUN_INFO-'].update(msg+'\n', append=True)
     raw = perform_average_reference(raw)
     spatial_filter = create_spatial_filter(raw,config)
