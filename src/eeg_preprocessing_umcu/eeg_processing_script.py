@@ -749,7 +749,7 @@ def perform_epoch_selection(raw,config):
     '''
     events = mne.make_fixed_length_events(raw, duration=(config['epoch_length']))
     epochs = mne.Epochs(raw, events=events, tmin=0, tmax=(
-        config['epoch_length']-(1/temporary_sample_f)), baseline=(0, config['epoch_length']), preload=True)
+        config['epoch_length']-(1/temporary_sample_f)), baseline=(0, config['epoch_length']-(1/temporary_sample_f)), preload=True)
 
     # Generate events at each second as seconds markers for the epochs plot
     time_event_ids = np.arange(config['epoch_length']*len(events))
@@ -975,7 +975,7 @@ while True:  # @noloop remove
                 raw_temp = perform_average_reference(raw_temp)
 
                 if config['apply_epoch_selection'] and config['rerun'] == 0:
-                    config = perform_epoch_selection(raw,config)
+                    config = perform_epoch_selection(raw_temp,config)
 
 
 
@@ -1004,7 +1004,7 @@ while True:  # @noloop remove
                     msg = "No rereferencing applied"
                 window['-RUN_INFO-'].update(msg+'\n', append=True)
 
-                # Copy exported raw object before applying possible downsampling
+                # Copy exported raw object before applying possible down sampling
                 if config['apply_beamformer']:
                     raw_beamform_output = raw.copy()
                     raw_beamform_output.drop_channels(config[file_name, 'bad'])
@@ -1014,8 +1014,10 @@ while True:  # @noloop remove
                     msg = "The EEG file used for beamforming now contains " + \
                         str(len(raw_beamform_output.ch_names)) + " channels"
                     window['-RUN_INFO-'].update(msg+'\n', append=True)
+                    
+                    raw_source = apply_spatial_filter(raw_beamform_output, config, spatial_filter)
 
-                # Downsample to preferred sample frequency if factor is not 1
+                # Downsample to preferred sample frequency
                 downsampled_sample_frequency = config['sample_frequency']//config['downsample_factor']
                 if config['downsample_factor'] != 1:
                     raw.resample(downsampled_sample_frequency, npad="auto")
@@ -1040,8 +1042,6 @@ while True:  # @noloop remove
                     save_epoch_data_to_txt(config, selected_epochs_sensor, "_Sensor_level_", None)
 
                     if config['apply_beamformer']:
-                        # Export beamformed epochs
-                        raw_source = apply_spatial_filter(raw_beamform_output, config, spatial_filter)
                         selected_epochs_source = apply_epoch_selection(raw_source, config, downsampled_sample_frequency)
                         save_epoch_data_to_txt(config, selected_epochs_source, "_Source_level_", dict(
                             eeg=1, mag=1e15, grad=1e13))
