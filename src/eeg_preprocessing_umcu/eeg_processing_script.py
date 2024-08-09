@@ -271,9 +271,9 @@ def ask_input_file_pattern(config, settings):
 
 
 def select_channels_to_be_dropped(in_list):
-    tooltip = "select one or more channels to be dropped, just press OK if you don't want to"
+    tooltip = "Select one or more channels to be dropped, or only press OK to drop none"
     items = in_list
-    txt = "Select channels to be dropped (if any)\nNote: for ICA make sure to drop at least S1,S2/VO,VB,HR,HL,MR,ML,Nose"
+    txt = "Select channels to be dropped (if any)\nNote: for ICA make sure to drop empty or non-EEG channels"
 
     layout = [
         [sg.Text(txt, tooltip=tooltip)],
@@ -839,6 +839,10 @@ progress_bar2 = window.find_element('progressbar2')
 # progress_bar = window.key('progressbar')
 # progress_bar2 = window.key('progressbar2')
 
+# NOG AANPASSEN
+rerun_new_epoch_selection = False
+
+
 # removed while loop
 while True:  # @noloop remove
     # window,  event, values = sg.read_all_windows()
@@ -852,6 +856,7 @@ while True:  # @noloop remove
         config['rerun']=1
         config = select_output_directory(config)
         if not config['apply_epoch_selection']: # already done?
+            rerun_new_epoch_selection = True
             config = ask_epoch_selection(config) # option to do epoch_selection
         config = ask_average_ref(config)
         config = ask_ica_option(config)
@@ -976,9 +981,9 @@ while True:  # @noloop remove
 
                 if config['apply_epoch_selection'] and config['rerun'] == 0:
                     config = perform_epoch_selection(raw_temp,config)
-
-
-
+                
+                if rerun_new_epoch_selection:
+                    config = perform_epoch_selection(raw_temp,config)
 
                 # ********** Preparation of the final raw file and epochs for export **********                
                 raw = apply_bad_channels(raw,config)
@@ -988,7 +993,8 @@ while True:  # @noloop remove
                 if config['apply_ica'] or config['apply_beamformer']:
                     raw.filter(l_freq=0.5, h_freq=45, l_trans_bandwidth=0.25,
                                h_trans_bandwidth=4, picks='eeg')
-                    msg = "Output signal filtered to 0.5-45 Hz (transition bands 0.25 Hz and 4 Hz resp. Necessary for ICA and/or Beamforming"
+                    msg = "Output signal filtered to 0.5-45 Hz (transition bands 0.25 Hz and 4 Hz resp. \
+                        Necessary for ICA and/or Beamforming"
                     window['-RUN_INFO-'].update(msg+'\n', append=True)
 
                 if config['apply_ica']:
@@ -1050,27 +1056,22 @@ while True:  # @noloop remove
                     msg = "No epoch selection performed"
                     window['-RUN_INFO-'].update(msg+'\n', append=True)
 
-                    # Extract the data into a DataFrame
                     raw_df = raw.to_data_frame(picks='eeg')
                     raw_df = raw_df.iloc[:, 1:]  # Drop first (time) column
                     raw_df = np.round(raw_df, decimals=4)
 
-                    # Define the file name
                     file_name_sensor = os.path.basename(
                         root) + "_Sensor_level.txt"
 
-                    # Define the output file path
                     file_path_sensor = os.path.join(
                         config['output_directory'], file_name_sensor)
 
-                    # Save the DataFrame to a text file
                     raw_df.to_csv(file_path_sensor, sep='\t', index=False)
                     progress_bar2.UpdateBar(1, 1) # epochs
 
                     if config['apply_beamformer']:
                         rawSource_df = raw_source.to_data_frame(
                             picks='eeg', scalings=dict(eeg=1, mag=1e15, grad=1e13))
-                        # Drop first (time) column
                         rawSource_df = rawSource_df.iloc[:, 1:]
                         rawSource_df = np.round(rawSource_df, decimals=4)
                         file_name_source = os.path.basename(
