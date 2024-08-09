@@ -650,7 +650,7 @@ def perform_ica (raw,raw_temp,config):
     ica
 
     ica.plot_components()  # heat map hoofd
-    ica.plot_sources(raw_ica, block=False)  # source
+    ica.plot_sources(raw_ica, block=True)  # source
 
     # https://mne.discourse.group/t/variance-of-ica-components/5544/2
     # unitize variances explained by PCA components, so the values sum to 1
@@ -671,17 +671,17 @@ def perform_ica (raw,raw_temp,config):
             ' ('+str(round(cumul_pct, 1)) + ' %)'
         window['-RUN_INFO-'].update(msg+'\n', append=True)
 
-    # ask which components to be deselected @@@
-    max_comp = config['nr_ica_components']
-    components_to_be_dropped = select_components_to_be_dropped(
-        max_comp)
-    config[config['file_name'], 'dropped components'] = components_to_be_dropped
-    msg = "Dropped components " + \
-          str(components_to_be_dropped)                    # msg = "Dropped components " + components_to_be_dropped
-    window['-RUN_INFO-'].update(msg+'\n', append=True)
+    # # ask which components to be deselected @@@
+    # max_comp = config['nr_ica_components']
+    # components_to_be_dropped = select_components_to_be_dropped(
+    #     max_comp)
+    # config[config['file_name'], 'dropped components'] = components_to_be_dropped
+    # msg = "Dropped components " + \
+    #       str(components_to_be_dropped)                    # msg = "Dropped components " + components_to_be_dropped
+    # window['-RUN_INFO-'].update(msg+'\n', append=True)
 
-    if len(components_to_be_dropped) > 0:
-        ica.exclude = components_to_be_dropped
+    # if len(components_to_be_dropped) > 0:
+    #     ica.exclude = components_to_be_dropped
 
     ica.apply(raw_temp)  # *1 skip if rerun, nee denk ik!
     return raw_temp,ica,config
