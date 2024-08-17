@@ -936,12 +936,8 @@ while True:  # @noloop remove
                     config['channels_to_be_dropped_selected'] = 1
                 raw.drop_channels(config['channels_to_be_dropped'])
                 
-                # determine max nr_channels (= upper limit of nr_components) @@@
-                config['max_channels'] = int(len(raw.ch_names)-3) # @@@ check
-                
                 # Temporary raw file to work with during preprocessing, raw is used to finally export data
                 raw_temp = raw.copy()
-                config['raw_temp'] = raw_temp ## Nog nodig?
 
                 plot_power_spectrum(raw_temp, filtered=False)
 
@@ -963,7 +959,10 @@ while True:  # @noloop remove
                     filenum += 1
                     progress_bar.UpdateBar(filenum, lfl)
                     continue
-                ## Kan bovenstaande nog naar de functie?
+                
+                # determine max nr_channels (= upper limit of nr of ICA components) @@@
+                config['max_channels'] = int(len(raw.ch_names)- 1 -len(config[file_name, 'bad'])) # @@@ check
+                print("max ICA channels: ", config['max_channels'])
                 
                 
                 if config['apply_ica']:
@@ -985,10 +984,10 @@ while True:  # @noloop remove
                 if rerun_new_epoch_selection:
                     config = perform_epoch_selection(raw_temp,config)
 
+
+
                 # ********** Preparation of the final raw file and epochs for export **********                
                 raw = apply_bad_channels(raw,config)
-                
-                # config[file_name, 'bad'] = config[file_name, 'bad']  # *1 rewrite ??
 
                 if config['apply_ica'] or config['apply_beamformer']:
                     raw.filter(l_freq=0.5, h_freq=45, l_trans_bandwidth=0.25,
