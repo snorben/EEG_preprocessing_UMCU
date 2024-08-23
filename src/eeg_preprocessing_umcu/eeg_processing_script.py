@@ -615,8 +615,11 @@ def create_raw(config,montage):
         raw = mne.io.read_raw_brainvision(file_path, preload=True)
     elif config['file_pattern'] == "*.edf":
         raw = mne.io.read_raw_edf(file_path, preload=True)
+    elif config['file_pattern'] == "*.fif":
+        raw = mne.io.read_raw_fif(file_path, preload=True, )
+        raw.pick_types(eeg=True, meg=False, eog=False)
 
-    if config['file_pattern'] != "*.vhdr": # Only .EEG raws already automatically have a montage
+    if config['file_pattern'] != "*.vhdr" and config['file_pattern'] != "*.fif": # Only .EEG raws already automatically have a montage
         raw.set_montage(montage = montage, on_missing ='ignore')
         
     if config['file_pattern'] != "*.txt":
@@ -898,7 +901,10 @@ while True:  # @noloop remove
     elif event == 'Start processing':
         try:
             # Adjust the file extension as needed to recognize the correct file type
-            montage = mne.channels.make_standard_montage(settings['montage',config['input_file_pattern']])
+            if config['file_pattern'] != "*.vhdr" and config['file_pattern'] != "*.fif":
+                montage = mne.channels.make_standard_montage(settings['montage',config['input_file_pattern']])
+            else:
+                montage = "NA"
             config['file_pattern'] = settings['input_file_pattern',config['input_file_pattern']]
 
             # progess bar vars
