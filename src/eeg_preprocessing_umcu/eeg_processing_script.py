@@ -900,12 +900,19 @@ while True:  # @noloop remove
 
     elif event == 'Start processing':
         try:
+            no_montage_patterns = ["*.vhdr", "*.fif"]
+            config['file_pattern'] = settings['input_file_pattern', config['input_file_pattern']]
+            
+            if config['file_pattern'] not in no_montage_patterns:
+                montage = mne.channels.make_standard_montage(settings['montage', config['input_file_pattern']])
+            else:
+                montage = "NA"
+                        
             # Adjust the file extension as needed to recognize the correct file type
             if config['file_pattern'] != "*.vhdr" and config['file_pattern'] != "*.fif":
                 montage = mne.channels.make_standard_montage(settings['montage',config['input_file_pattern']])
             else:
                 montage = "NA"
-            config['file_pattern'] = settings['input_file_pattern',config['input_file_pattern']]
 
             # progess bar vars
             lfl = len(config['input_file_paths'])
