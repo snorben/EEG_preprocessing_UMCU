@@ -89,6 +89,7 @@ def load_config(fn):
 #     config['config_file'] = os.path.join(config['output_directory'], fn)
 #     return (config)
 
+
 def select_input_file_paths(config):
     if config['rerun']==0:
         # https://stackoverflow.com/questions/73764314/more-than-one-file-type-in-pysimplegui
@@ -102,10 +103,9 @@ def select_input_file_paths(config):
         config['input_file_paths'] = file_list  
     return config
 
-    # if config['rerun']==1 then config['input_file_paths'] already contains file_list
 
 def load_config_file():    
-    # file_types=(('.pkl files','*.pkl'),) => fro rerun
+    # file_types=(('.pkl files','*.pkl'),) => from rerun
     txt=settings['load_config_file','text']
     config_file=sg.popup_get_file(txt,file_types=(('.pkl files','*.pkl'),),no_window=False,background_color='white', 
                                font=font,location=(100, 100))
@@ -118,6 +118,7 @@ def load_config_file():
     msg = '\nConfig ' + config_file + ' loaded for rerun\n'
     window['-RUN_INFO-'].update(msg+'\n', append=True)
     return config
+
 
 def select_output_directory(config):
     if not config['rerun']:
@@ -144,7 +145,7 @@ def select_output_directory(config):
             if event in (sg.WIN_CLOSED, 'Ok'):
                 break
         window.close()
-    # if config['rerun']==1 then config['output_directory'] already set
+
     return config
 
 def ask_average_ref(config):
@@ -197,7 +198,7 @@ def ask_ica_option(config):
 
 
 def ask_beamformer_option(config):
-    txt = "Do you want to apply Beamforming?"  # @@@
+    txt = "Do you want to apply Beamforming?"
     tooltip = """Do you want to apply Beamforming?"""
     layout = [[sg.Text(txt, tooltip=tooltip, enable_events=True)],
               [sg.Button('Yes'), sg.Button('No')]]
@@ -247,7 +248,7 @@ def ask_epoch_selection(config):
 
 
 def ask_input_file_pattern(config, settings):
-    # note: input_file_patterns read from eeg_processing_config file
+    # note: input_file_patterns read from eeg_processing_settings file
     txt=settings['input_file_patterns','text']
     tooltip=settings['input_file_patterns','tooltip']
     layout = [
@@ -308,7 +309,7 @@ def select_channels_to_be_dropped(in_list):
 def select_components_to_be_dropped(max_comp):
     tooltip = "select one or more components to be dropped, just press OK if you don't want to"
     txt = "Select components to be dropped (if any)"
-    items = list(range(0, max_comp))  # @@@ numbering starts at 0
+    items = list(range(0, max_comp))
     layout = [
         [sg.Text(txt, tooltip=tooltip)],
         [sg.Listbox(values=items, size=(15, 30), enable_events=True, bind_return_key=True,
@@ -449,8 +450,12 @@ def ask_downsample_factor(config,settings):
     return config
 
 
-
 def set_batch_related_names(config):
+    '''
+    Function that performs the actions necessary to define all file/folder/path names
+    associated with the current EEG batch that is being processed. These names are fixed for the 
+    entire batch.
+    '''
     # batch_prefix batch_name batch_output_subdirectory config_file logfile
     today = datetime.today()
     dt = today.strftime('%Y%m%d_%H%M%S')  # suffix
@@ -500,6 +505,11 @@ def set_batch_related_names(config):
     return config
 
 def set_file_output_related_names(config):    # in file loop
+    '''
+    Function that performs the actions necessary to define all file/folder/path names
+    associated with the current EEG FILE that is being processed. These names change
+    for each file in the batch.
+    '''
     # strip file_name for use as sub dir
     fn = config['file_name'].replace(" ", "")
     fn = fn.replace(".", "")
@@ -516,7 +526,10 @@ def set_file_output_related_names(config):    # in file loop
     return config
 
 
-def create_dict():  # create initial dict for manual processing
+def create_dict():  
+    '''
+    Function to create initial dict with starting values for processing.
+    '''
     try:
         print('create_dict')
         config = {'apply_average_ref': 1,
@@ -554,8 +567,10 @@ def create_dict():  # create initial dict for manual processing
     return
 
 
-# Functions for exporting data
 def extract_epoch_data(raw_output, epoch_length, selected_indices, sfreq):
+    '''
+    Function used to extract epoch data from an MNE raw object.
+    '''
     events_out = mne.make_fixed_length_events(
         raw_output, duration=epoch_length)
     epochs_out = mne.Epochs(raw_output, events=events_out, tmin=0, tmax=(epoch_length - (1 / sfreq)),
@@ -565,18 +580,16 @@ def extract_epoch_data(raw_output, epoch_length, selected_indices, sfreq):
     return selected_epochs_out
 
 
-def save_epoch_data_to_txt(config,epoch_data, file_suffix, scalings):
-    # @@@outputfile aanpassen
+def save_epoch_data_to_txt(epoch_data, base, scalings):
+    '''
+    Function to save an MNE epoch object to txt files. 
+    '''
     for i in range(len(epoch_data)):
         epoch_df = epoch_data[i].to_data_frame(picks='eeg', scalings=scalings)
         epoch_df = epoch_df.drop(columns=['time', 'condition', 'epoch'])
         epoch_df = np.round(epoch_df, decimals=4)
-        file_name = os.path.basename(
-            root) + file_suffix + "Epoch" + str(i + 1) + ".txt"
-        # file_name_out = os.path.join(config['output_directory'], file_name)
-        file_name_out = os.path.join(config['file_output_subdirectory'], file_name)
-        # print('save_epoch_data_to_txt file_name:',file_name)
-        # print('save_epoch_data_to_txt file_name_out:',file_name_out)
+        
+        file_name_out = os.path.join(base, "_Epoch", str(i + 1) , ".txt")
         epoch_df.to_csv(file_name_out, sep='\t', index=False)
 
         msg = 'Output file ' + file_name_out + ' created'
@@ -758,10 +771,10 @@ def perform_ica (raw,raw_temp,config):
 
 def perform_bad_channels_selection(raw,config):
     '''
-    Function that applies MNE plotting to interactively select bad channels and save these to the config. These channels
-    can later be interpolated or dropped depending on the needs.
+    Function that applies MNE plotting to interactively select bad channels and save these to the config. 
+    These channels can later be interpolated or dropped depending on the needs.
     '''
-    msg = "Select bad channels bij left-clicking channels"
+    msg = "Select bad channels by left-clicking channels"
     window['-RUN_INFO-'].update(msg+'\n', append=True)
     raw.plot(n_channels=len(
         raw.ch_names), block=True, title="Bandpass filtered data")
@@ -803,22 +816,14 @@ def perform_average_reference(raw):
     return raw
 
 
-# start loop
-# window = make_win1()
-# window = sg.Window('Test',layout=layout)
-# window = sg.Window('Pattern 2B', layout,finalize=True)
+
 window = sg.Window('UMC Utrecht MNE EEG Preprocessing', layout, location=(
     30, 30), size=(1000, 700), finalize=True, font=font)
-# progress_bar = window.FindElement('progressbar')
-# progress_bar2 = window.FindElement('progressbar2')
+
 progress_bar = window.find_element('progressbar')
 progress_bar2 = window.find_element('progressbar2')
-# progress_bar = window.key('progressbar')
-# progress_bar2 = window.key('progressbar2')
 
-# removed while loop
 while True:  # @noloop remove
-    # window,  event, values = sg.read_all_windows()
     # https://trinket.io/pygame/36bf0df5f3, https://github.com/PySimpleGUI/PySimpleGUI/issues/2805
     event, values = window.read()
     if event == "Exit" or event == sg.WIN_CLOSED:
@@ -870,7 +875,6 @@ while True:  # @noloop remove
 
     elif event == 'Start processing':
         try:
-            # Adjust the file extension as needed to recognize the correct file type
             montage = mne.channels.make_standard_montage(settings['montage',config['input_file_pattern']])
             config['file_pattern'] = settings['input_file_pattern',config['input_file_pattern']]
 
@@ -901,8 +905,7 @@ while True:  # @noloop remove
                     config['channels_to_be_dropped_selected'] = 1
                 raw.drop_channels(config['channels_to_be_dropped'])
                 
-                # determine max nr_channels (= upper limit of nr_components) @@@
-                config['max_channels'] = int(len(raw.ch_names)-3) # @@@ check
+                config['max_channels'] = int(len(raw.ch_names)-3) ## Needs to be dependent on bad channels
                 
                 # Temporary raw file to work with during preprocessing, raw is used to finally export data
                 raw_temp = raw.copy()
@@ -1048,22 +1051,19 @@ while True:  # @noloop remove
                 # Create output epochs and export to .txt (non-beamformed)
                 
                 if config['apply_epoch_selection']:  # rename to epoch_output #*3
-                    # @@@outputfile aanpassen
-                    # *3 load selected_indces from  fig
                     selected_epochs_out = extract_epoch_data(
                         raw, config['epoch_length'], config[file_name, 'epochs'], downsampled_sample_frequency)
-                    # config[selected_indices] #*1
 
                     len2 = len(selected_epochs_out)
                     progress_bar2.UpdateBar(0, len2)
-                    #(config,epoch_data, file_suffix, scalings)
-                    save_epoch_data_to_txt(config, selected_epochs_out, "_Sensor_level_", None)
+                    
+                    save_epoch_data_to_txt(selected_epochs_out, config[file_path_sensor], None)
 
                     if config['apply_beamformer']:
                         # Export beamformed epochs
                         epoch_data_source = extract_epoch_data(
                             rawSource, config['epoch_length'], config[file_name, 'epochs'], downsampled_sample_frequency)
-                        save_epoch_data_to_txt(config, epoch_data_source, "_Source_level_", dict(
+                        save_epoch_data_to_txt(epoch_data_source, config[file_path_source], dict(
                             eeg=1, mag=1e15, grad=1e13))
 
                 else:  # = no epoch_output
