@@ -55,7 +55,7 @@ def print_dict(dict): # pprint and json.print do not work well with composite ke
         print(key, ":", dict[key])  
 
 def write_config_file(config):
-    fn = config['configfile']
+    fn = config['config_file']
     # first remove raw data (legacy)
     config.pop('raw', None)  # remove from dict if exists
     config.pop('raw_temp', None)  # remove from dict if exists
@@ -73,71 +73,78 @@ def load_config(fn):
         config = pickle.load(f)
     return config
 
-def set_output_fn():  # for .log and .pkl
-    today = datetime.today()
-    dt = today.strftime('%Y%m%d_%H%M%S')  # suffix
-    fn = config['logfile_prefix'] + '_'+dt + ext
-    file_name_out = os.path.join(config['output_directory'], fn)
-    return (file_name_out)
+# def set_output_fn():  # for .log and .pkl
+#     today = datetime.today()
+#     dt = today.strftime('%Y%m%d_%H%M%S')  # suffix
+#     fn = config['batch_prefix'] + '_'+dt + ext
+#     file_name_out = os.path.join(config['output_directory'], fn)
+#     return (file_name_out)
 
-def set_output_file_names(config):  # for .log & .pkl
-    today = datetime.today()
-    dt = today.strftime('%Y%m%d_%H%M%S')  # suffix
-    fn = config['logfile_prefix'] + '_'+dt + '.log'
-    config['logfile'] = os.path.join(config['output_directory'], fn)
-    fn = config['logfile_prefix'] + '_'+dt + '.pkl'
-    config['configfile'] = os.path.join(config['output_directory'], fn)
-    return (config)
+# def set_pkl_and_log_file_names(config):  # for .log & .pkl
+#     today = datetime.today()
+#     dt = today.strftime('%Y%m%d_%H%M%S')  # suffix
+#     fn = config['batch_prefix'] + '_'+dt + '.log'
+#     config['logfile'] = os.path.join(config['output_directory'], fn)
+#     fn = config['batch_prefix'] + '_'+dt + '.pkl'
+#     config['config_file'] = os.path.join(config['output_directory'], fn)
+#     return (config)
 
 def select_input_file_paths(config):
-    # https://stackoverflow.com/questions/73764314/more-than-one-file-type-in-pysimplegui
-    type_EEG = settings['input_file_paths','type_EEG']
-    txt=settings['input_file_paths','text']
-    # popup_get_file does not support tooltip
-    f = sg.popup_get_file(txt,  title="File selector", multiple_files=True,font=font,
-                          file_types=type_EEG,
-                          background_color='white', location=(100, 100))
-    file_list = f.split(";") 
-    config['input_file_paths'] = file_list    
+    if config['rerun']==0:
+        # https://stackoverflow.com/questions/73764314/more-than-one-file-type-in-pysimplegui
+        type_EEG = settings['input_file_paths','type_EEG']
+        txt=settings['input_file_paths','text']
+        # popup_get_file does not support tooltip
+        f = sg.popup_get_file(txt,  title="File selector", multiple_files=True,font=font,
+                              file_types=type_EEG,
+                              background_color='white', location=(100, 100))
+        file_list = f.split(";") 
+        config['input_file_paths'] = file_list  
     return config
 
+    # if config['rerun']==1 then config['input_file_paths'] already contains file_list
+
 def load_config_file():    
-    # file_types=(('.pkl files','*.pkl'),)
+    # file_types=(('.pkl files','*.pkl'),) => fro rerun
     txt=settings['load_config_file','text']
-    pkl_file=sg.popup_get_file(txt,file_types=(('.pkl files','*.pkl'),),no_window=False,background_color='white', 
+    config_file=sg.popup_get_file(txt,file_types=(('.pkl files','*.pkl'),),no_window=False,background_color='white', 
                                font=font,location=(100, 100))
-    if type(pkl_file) != type(""): 
+    if type(config_file) != type(""): 
         sg.popup_error ("No file selected","Ok")
         exit()
-    config=load_config(pkl_file)
-    msg = '\nConfig ' + pkl_file + ' loaded for rerun\n'
+    config=load_config(config_file)
+    config['previous_run_config_file']=config_file
+    
+    msg = '\nConfig ' + config_file + ' loaded for rerun\n'
     window['-RUN_INFO-'].update(msg+'\n', append=True)
     return config
 
 def select_output_directory(config):
-    tooltip = 'Output folder for exported epoch- and log files'
-    working_directory = os.getcwd()
-    layout = [
-        [sg.Text(
-            "Select folder to save log files to", tooltip=tooltip)],
-        [sg.InputText(default_text=working_directory, key="-FOLDER_PATH-"),
-         sg.FolderBrowse(initial_folder=working_directory)],
-        [sg.Button('Select')]
-    ]
-    window = sg.Window("Directory", layout, modal=True, use_custom_titlebar=True, font=font, 
-                       background_color='white', location=(100, 100))
-    while True:
-        event, values = window.read()
-        if event == 'Select':
-            try:
-                config['output_directory'] = values["-FOLDER_PATH-"]
+    if not config['rerun']:
+        tooltip = 'Output folder for exported epoch- and log files'
+        working_directory = os.getcwd()
+        layout = [
+            [sg.Text(
+                "Select base output directory to save epoch- and log files to\n(Subdirectories will be created for log, epochs etc.", tooltip=tooltip)],
+            [sg.InputText(default_text=working_directory, key="-FOLDER_PATH-"),
+             sg.FolderBrowse(initial_folder=working_directory)],
+            [sg.Button('Select')]
+        ]
+        window = sg.Window("Directory", layout, modal=True, use_custom_titlebar=True, font=font, 
+                           background_color='white', location=(100, 100))
+        while True:
+            event, values = window.read()
+            if event == 'Select':
+                try:
+                    config['output_directory'] = values["-FOLDER_PATH-"]
+                    break
+                except:
+                    sg.popup_error('No valid folder', location=(100, 100),font=font)
+                    window.close()
+            if event in (sg.WIN_CLOSED, 'Ok'):
                 break
-            except:
-                sg.popup_error('No valid folder', location=(100, 100),font=font)
-                window.close()
-        if event in (sg.WIN_CLOSED, 'Ok'):
-            break
-    window.close()
+        window.close()
+    # if config['rerun']==1 then config['output_directory'] already set
     return config
 
 def ask_average_ref(config):
@@ -442,42 +449,81 @@ def ask_downsample_factor(config,settings):
     return config
 
 
-def ask_logfile_prefix(config):
-    tooltip = 'Enter a prefix (name) for the log file. The log file will be named <prefix><timestamp>.log'
-    layout = [
-        [sg.Text("Enter prefix (e.g. your name) for the log file:", tooltip=tooltip)],
-        [sg.InputText(key='-LOGFILE_PREFIX-')],
-        [sg.Button('Ok', bind_return_key=True)]
-    ]
-    window = sg.Window("EEG processing input parameters", layout, modal=True, use_custom_titlebar=True, font=font, 
-                       background_color='white', location=(100, 100))
-    while True:
-        event, values = window.read()
-        if event == 'Ok':
-            try:
-                prefix = values["-LOGFILE_PREFIX-"]
-                if not prefix:
-                    sg.popup_error('No valid prefix', location=(
-                        100, 100),font=font)  # empty string
+
+def set_batch_related_names(config):
+    # batch_prefix batch_name batch_output_subdirectory config_file logfile
+    today = datetime.today()
+    dt = today.strftime('%Y%m%d_%H%M%S')  # suffix
+
+    if config['rerun']==0:
+        tooltip = 'Enter a prefix (e.g. study name) for this batch. The log file will be named <prefix><timestamp>.log'
+        txt="Enter a prefix for this batch (e.g. BIOCOG_batch1)\n(This prefix will be used to create the subdirectory for this batch)\n(Prefix should not contain spaces):"
+        layout = [
+            [sg.Text(text=txt, tooltip=tooltip)],
+            [sg.InputText(key='-BATCH_PREFIX-')],
+            [sg.Button('Ok', bind_return_key=True)]
+        ]
+        window = sg.Window("EEG processing input parameters", layout, modal=True, use_custom_titlebar=True, font=font, 
+                           background_color='white', location=(100, 100))
+        while True:
+            event, values = window.read()
+            if event == 'Ok':
+                try:
+                    prefix = values["-BATCH_PREFIX-"]
+                    if not prefix:
+                        sg.popup_error('No valid prefix', location=(
+                            100, 100),font=font)  # empty string
+                        window.close()
+                    prefix = prefix.replace(" ", "_")
+                    config['batch_prefix'] = prefix # replace spaces
+                    break
+                except:
+                    # not sure if except is needed
+                    sg.popup_error('No value', location=(100, 100),font=font)
                     window.close()
-                config['logfile_prefix'] = prefix
+            if event in (sg.WIN_CLOSED, 'Ok'):
                 break
-            except:
-                # not sure if except is needed
-                sg.popup_error('No value', location=(100, 100),font=font)
-                window.close()
-        if event in (sg.WIN_CLOSED, 'Ok'):
-            break
-    window.close()
+        window.close()
+    # else use config['batch_prefix'] from previous run  
+    config['batch_name'] = config['batch_prefix'] + '_' + dt
+    config['batch_output_subdirectory'] = os.path.join(config['output_directory'], config['batch_name'])    
+    # create if not existing
+    if not os.path.exists(config['batch_output_subdirectory']):
+       os.makedirs(config['batch_output_subdirectory']) 
+    
+    fn = config['batch_name'] + '.log'
+    config['logfile'] = os.path.join(config['batch_output_subdirectory'], fn)
+    fn = config['batch_name'] + '.pkl'
+    config['config_file'] = os.path.join(config['batch_output_subdirectory'], fn)
+    print('set_batch_related_names config_file ', config['config_file'])
+        
+    return config
+
+def set_file_output_related_names(config):    # in file loop
+    # strip file_name for use as sub dir
+    fn = config['file_name'].replace(" ", "")
+    fn = fn.replace(".", "")
+    # Split the file path and extension to use when constructing the output file names
+    root, ext = os.path.splitext(config['file_path'])
+    config['file_output_subdirectory'] = posixpath.join(config['batch_output_subdirectory'], fn ) # this is the sub-dir for output (epoch) files, remove spaces
+    if not os.path.exists(config['file_output_subdirectory']):
+       os.makedirs(config['file_output_subdirectory'])  
+    file_name_sensor = os.path.basename(root) + "_Sensor_level"
+    config['file_path_sensor'] = os.path.join(config['file_output_subdirectory'], file_name_sensor)
+    file_name_source = os.path.basename(root) + "_Source_level"
+    config['file_path_source'] = os.path.join(config['file_output_subdirectory'], file_name_source)
+       
     return config
 
 
 def create_dict():  # create initial dict for manual processing
     try:
+        print('create_dict')
         config = {'apply_average_ref': 1,
                   'apply_epoch_selection': 0,
                   'epoch_length': 0.0,
                   'apply_ica': 0,
+                  'rerun': 0,
                   'apply_beamformer': 0,
                   'channels_to_be_dropped_selected': 0,
                   'nr_ica_components': 0,
@@ -488,13 +534,17 @@ def create_dict():  # create initial dict for manual processing
                   'montage': '-',
                   'input_file_names': [],  # file name without path, selected by user or used in rerun run
                   'input_file_paths': [],  # full file paths
-                  'pkl_file': [],  # used to save config to disk
-                  'input_pkl_file': [],  # used for rerun function
                   'channel_names': [],  # file names only
-                  'sample_frequency': 250,
-                  'output_directory': 'C:\\AgileInzichtShare\\Engagements\\UMC\\Preprocessing EEG\\output',
-                  'input_directory': ' ',
-                  'logfile_prefix': 'herman'}
+                  'sample_frequency': 250,                  
+                  'config_file': ' ',  # used to save config to disk
+                  'log_file': ' ',  # used to save config to disk
+                  'previous_run_config_file ': ' ',  # used for rerun function
+                  'output_directory': ' ',
+                  'batch_output_subdirectory': ' ',
+                  'file_output_subdirectory': ' ',
+                  'input_directory': ' ', # set in file loop
+                  'batch_name': ' ',
+                  'batch_prefix': ' '}
 
 
         return config
@@ -516,13 +566,17 @@ def extract_epoch_data(raw_output, epoch_length, selected_indices, sfreq):
 
 
 def save_epoch_data_to_txt(config,epoch_data, file_suffix, scalings):
+    # @@@outputfile aanpassen
     for i in range(len(epoch_data)):
         epoch_df = epoch_data[i].to_data_frame(picks='eeg', scalings=scalings)
         epoch_df = epoch_df.drop(columns=['time', 'condition', 'epoch'])
         epoch_df = np.round(epoch_df, decimals=4)
         file_name = os.path.basename(
             root) + file_suffix + "Epoch" + str(i + 1) + ".txt"
-        file_name_out = os.path.join(config['output_directory'], file_name)
+        # file_name_out = os.path.join(config['output_directory'], file_name)
+        file_name_out = os.path.join(config['file_output_subdirectory'], file_name)
+        # print('save_epoch_data_to_txt file_name:',file_name)
+        # print('save_epoch_data_to_txt file_name_out:',file_name_out)
         epoch_df.to_csv(file_name_out, sep='\t', index=False)
 
         msg = 'Output file ' + file_name_out + ' created'
@@ -771,8 +825,9 @@ while True:  # @noloop remove
         break
     if event == "Rerun previous batch" :
         config = load_config_file() # .pkl file
-        print (config)
         config['rerun']=1
+        config = select_input_file_paths(config) # read from pkl
+        config = set_batch_related_names(config) # batch_prefix batch_name batch_output_subdirectory config_file logfile
         config = select_output_directory(config)
         if not config['apply_epoch_selection']: # already done?
             config = ask_epoch_selection(config) # option to do epoch_selection
@@ -780,18 +835,20 @@ while True:  # @noloop remove
         config = ask_ica_option(config)
         config = ask_beamformer_option(config)
         config = ask_downsample_factor(config,settings)
-        # logfile_prefix taken from saved_config
+        # batch_prefix taken from saved_config
         # channels_to_be_dropped taken from saved_config  
         # config = select_input_file_paths(config) # generate from saved_config in loop - dir from pkl
-        # config = set_output_file_names(config) # composed in batch loop
+        # config = set_pkl_and_log_file_names(config) # composed in batch loop
         msg = 'You may now start processing'
         window['-RUN_INFO-'].update(msg+'\n', append=True)
         
     elif event == 'Enter parameters for this batch':
+        print('Enter parameters for this batch')
         config = create_dict()  # before file loop
-        config['rerun']=0
-        config = select_input_file_paths(config)
-        config = select_output_directory(config)
+        config['rerun'] = 0
+        config = select_input_file_paths(config) # gui file explorer
+        config = select_output_directory(config) # gui file explorer
+        config = set_batch_related_names(config) # batch_prefix batch_name batch_output_subdirectory config_file logfile
         config = ask_average_ref(config)
         config = ask_epoch_selection(config)
         config = ask_ica_option(config)
@@ -805,9 +862,7 @@ while True:  # @noloop remove
             sample_frequency = config['sample_frequency']  # check
 
         config = ask_downsample_factor(config,settings)
-        config = ask_logfile_prefix(config)  # before file loop
-        # set file names for config and log
-        config = set_output_file_names(config)
+
         print (config)
         msg = 'You may now start processing'
         window['-RUN_INFO-'].update(msg+'\n', append=True)
@@ -827,19 +882,11 @@ while True:  # @noloop remove
                 config['file_path'] = file_path # to be used by functions, this is the current file_path
                 f = Path(file_path)
                 file_name = f.name
-                config['file_name'] = file_name
                 input_dir = str(f.parents[0]) # to prevent error print config json
                 config['input_directory'] = input_dir # save, scope=batch
-                
-                # strip file_name for use as sub dir
-                fn = file_name.replace(" ", "")
-                fn = fn.replace(".", "")
-                output_dir = posixpath.join(input_dir, fn ) # this is the sub-dir for output (epoch) files, remove spaces
-                config['output_directory'] = output_dir # save
-                if not os.path.exists(config['output_directory']):
-                   os.makedirs(config['output_directory'])
-                
-                # add file name to list in config file, to be used in rerun
+                config['file_name'] = file_name
+                config=set_file_output_related_names(config) # set output directory for epochs etc. 
+                # add file name to list in config file, to be used in rerun                
                 config['input_file_names'].append(file_name) # add file name to config file, to be used in rerun
                 msg = '\n************ Processing file ' + file_path + ' ************'
                 window['-RUN_INFO-'].update(msg+'\n', append=True)
@@ -999,7 +1046,9 @@ while True:  # @noloop remove
                     window['-RUN_INFO-'].update(msg+'\n', append=True)
 
                 # Create output epochs and export to .txt (non-beamformed)
+                
                 if config['apply_epoch_selection']:  # rename to epoch_output #*3
+                    # @@@outputfile aanpassen
                     # *3 load selected_indces from  fig
                     selected_epochs_out = extract_epoch_data(
                         raw, config['epoch_length'], config[file_name, 'epochs'], downsampled_sample_frequency)
@@ -1031,14 +1080,21 @@ while True:  # @noloop remove
                         root) + "_Sensor_level.txt"
 
                     # Define the output file path
-                    file_path_sensor = os.path.join(
-                        config['output_directory'], file_name_sensor)
+                    # @@@outputfile aanpassen
+                    # file_path_sensor = os.path.join(
+                    #     config['output_directory'], file_name_sensor)
+                    # file_path_sensor = os.path.join(
+                    #     config['file_output_subdirectory'], file_name_sensor)
+                    print ('main 1098  file_name_sensor: ',file_name_sensor)
+                    print ('main 1098  file_path_sensor: ',file_name_sensor)
 
                     # Save the DataFrame to a text file
-                    raw_df.to_csv(file_path_sensor, sep='\t', index=False)
+                    # raw_df.to_csv(file_path_sensor, sep='\t', index=False)
+                    raw_df.to_csv(config['file_path_sensor'], sep='\t', index=False)
                     progress_bar2.UpdateBar(1, 1) # epochs
 
                     if config['apply_beamformer']:
+                        # @@@outputfile aanpassen
                         rawSource_df = rawSource.to_data_frame(
                             picks='eeg', scalings=dict(eeg=1, mag=1e15, grad=1e13))
                         # Drop first (time) column
@@ -1046,10 +1102,14 @@ while True:  # @noloop remove
                         rawSource_df = np.round(rawSource_df, decimals=4)
                         file_name_source = os.path.basename(
                             root) + "_Source_level.txt"
-                        file_path_source = os.path.join(
-                            config['output_directory'], file_name_source)
-                        rawSource_df.to_csv(
-                            file_path_source, sep='\t', index=False)
+                        # file_path_source = os.path.join(
+                        #     config['output_directory'], file_name_source)
+                        # file_path_source = os.path.join(
+                        #     config['file_output_subdirectory'], file_name_source)
+                        print ('main 1115 apply_beamformer  file_name_source: ',file_name_source)
+                        print ('main 1115 apply_beamformer  file_path_source: ',file_path_source)
+                        # rawSource_df.to_csv(file_path_source, sep='\t', index=False)
+                        rawSource_df.to_csv(config['file_path_source'], sep='\t', index=False)
 
                 filenum = filenum+1
                 progress_bar.UpdateBar(filenum, lfl) # files
