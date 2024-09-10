@@ -7,14 +7,15 @@ Created on Wed May  1 09:56:45 2024
 import mne
 import matplotlib
 import PySimpleGUI as sg
+
 # matplotlib.use('Qt5Agg')  # Set the backend to Qt5
 # mne.set_config('MNE_BROWSER_BACKEND', 'matplotlib')
 matplotlib.use('TkAgg')  # Setting bakcend working best for Spyder
 mne.set_config('MNE_BROWSER_BACKEND', 'matplotlib')  # Setting for Spyder
+
 # deaults for gui user input
 sg.theme('Default1')
 font = ("Ubuntu Medium", 14)
-# my_image=sg.Image('download3.png')
 my_image = sg.Image('UMC_logo.png')  # UMC logo
 sg.set_options(tooltip_font=(16))  # tootip size
 settings={}
@@ -58,6 +59,7 @@ settings['input_file_patterns','tooltip']='Enter one filetype and electrode layo
 settings['load_config_file','text']="Select a previously created .pkl file"
 settings['input_file_paths','type_EEG']=(("EEG .txt Files", "*.txt"), ("EEG .bdf Files", "*.bdf"),
             ("EEG .vhdr Files", "*.vhdr"), ("EEG .edf Files", "*.edf"),) # note the comma...
+
 settings['input_file_paths','text']="Select input EEG file(s) - on Mac use 'Options' to filter file types "  
 
 
