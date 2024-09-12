@@ -1,8 +1,3 @@
-# see documentation, e.g.
-# - https://packaging.python.org/en/latest/specifications/declaring-project-metadata/#declaring-project-metadata
-# - https://setuptools.pypa.io/en/latest/userguide/pyproject_config.html
-# - https://www.python.org/dev/peps/pep-0621/
-
 [build-system]
 requires = ["setuptools>=64.0.0", "setuptools-scm", "wheel"]
 build-backend = "setuptools.build_meta"
@@ -18,11 +13,7 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License",
     "Natural Language :: English",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
 ]
 dependencies = []
 description = "eeg preprocessing"
@@ -33,7 +24,7 @@ keywords = [
 license = {file = "LICENSE"}
 name = "eeg_preprocessing_umcu"
 readme = {file = "README.md", content-type = "text/markdown"}
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 version = "0.1.0"
 
 [project.optional-dependencies]
@@ -44,11 +35,7 @@ dev = [
     "pytest",
     "pytest-cov",
     "ruff",
-    "sphinx",
-    "sphinx_rtd_theme",
-    "sphinx-autoapi",
     "tox",
-    "myst_parser",
 ]
 publishing = [
     "build",
@@ -69,98 +56,15 @@ branch = true
 source = ["src/eeg_preprocessing_umcu"]
 command_line = "-m pytest"
 
-[tool.isort]
-lines_after_imports = 2
-force_single_line = 1
-no_lines_before = ["FUTURE", "STDLIB", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
-known_first_party = "eeg_preprocessing_umcu"
-src_paths = ["src/eeg_preprocessing_umcu", "tests"]
-line_length = 120
-
 [tool.tox]
 legacy_tox_ini = """
 [tox]
-envlist = py38,py39,py310,py311,py312
+envlist = py310
 skip_missing_interpreters = true
 [testenv]
 commands = pytest
 extras = dev
 """
-
-[tool.ruff]
-# Enable Pyflakes `E` and `F` codes by default.
-select = [
-    "F",  # Pyflakes
-    "E",  # pycodestyle (error)
-    "W",    # pycodestyle (warning)
-    # "C90",  # mccabe
-    "I",    # isort
-    "D",    # pydocstyle
-    # "PL",   # Pylint
-    # "PLC",  # Convention
-    # "PLE",  # Error
-    # "PLR",  # Refactor
-    # "PLW",  # Warning
-
-]
-ignore = [
-    'D100',  # Missing module docstring
-    'D104',  # Missing public package docstring
-    # The following list excludes rules irrelevant to the Google style
-    'D203',
-    'D204',
-    'D213',
-    'D215',
-    'D400',
-    'D401',
-    'D404',
-    'D406',
-    'D407',
-    'D408',
-    'D409',
-    'D413',
-]
-
-# Allow autofix for all enabled rules (when `--fix`) is provided.
-fixable = ["A", "B", "C", "D", "E", "F", "I"]
-unfixable = []
-
-exclude = [
-    ".bzr",
-    ".direnv",
-    ".eggs",
-    ".git",
-    ".hg",
-    ".mypy_cache",
-    ".nox",
-    ".pants.d",
-    ".ruff_cache",
-    ".svn",
-    ".tox",
-    ".venv",
-    "__pypackages__",
-    "_build",
-    "buck-out",
-    "build",
-    "dist",
-    "node_modules",
-    "venv",
-    ".venv",
-    "scripts",
-]
-per-file-ignores = {}
-
-
-# Allow unused variables when underscore-prefixed.
-dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
-
-target-version = "py39"
-line-length = 120
-
-[tool.ruff.isort]
-known-first-party = ["eeg_preprocessing_umcu"]
-force-single-line = true
-no-lines-before = ["future","standard-library","third-party","first-party","local-folder"]
 
 [tool.bumpversion]
 current_version = "0.1.0"
@@ -173,6 +77,3 @@ filename = "pyproject.toml"
 
 [[tool.bumpversion.files]]
 filename = "CITATION.cff"
-
-[[tool.bumpversion.files]]
-filename = "docs/conf.py"
