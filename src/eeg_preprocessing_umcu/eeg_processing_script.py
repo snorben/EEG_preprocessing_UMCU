@@ -606,20 +606,6 @@ def create_dict():
         window.close()
 
         
-def extract_epoch_data(raw_output, epoch_length, selected_indices, sfreq):
-    '''
-    Function used to extract epoch data from an MNE raw object.
-    '''
-    events_out = mne.make_fixed_length_events(
-        raw_output, duration=epoch_length)
-    epochs_out = mne.Epochs(raw_output, events=events_out, tmin=0, tmax=(epoch_length - (1 / sfreq)),
-                            baseline=(0, epoch_length))
-    selected_epochs_out = epochs_out[selected_indices]
-    selected_epochs_out.drop_bad()
-    
-    return selected_epochs_out
-
-
 def save_epoch_data_to_txt(epoch_data, base, scalings):
     '''
     Function to save an MNE epoch object to txt files. 
@@ -635,25 +621,6 @@ def save_epoch_data_to_txt(epoch_data, base, scalings):
         msg = 'Output file ' + file_name_out + ' created'
         window['-FILE_INFO-'].update(msg+'\n', append=True)
         progress_bar2.UpdateBar(i+1)
-        
-def save_epoch_data_to_txt(config, epoch_data, file_suffix, scalings):
-    '''
-    Function that loops over the selected epochs and saves each epoch to a separate .txt file.
-    '''
-    for i in range(len(epoch_data)):
-        epoch_df = epoch_data[i].to_data_frame(picks='eeg', scalings=scalings)
-        epoch_df = epoch_df.drop(columns=['time', 'condition', 'epoch'])
-        epoch_df = np.round(epoch_df, decimals=4)
-        file_name = os.path.basename(
-            root) + file_suffix + "Epoch" + str(i + 1) + ".txt"
-        file_name_out = os.path.join(config['output_directory'], file_name)
-        epoch_df.to_csv(file_name_out, sep='\t', index=False)
-
-        msg = 'Output file ' + file_name_out + ' created'
-        window['-FILE_INFO-'].update(msg+'\n', append=True)
-        progress_bar2.UpdateBar(i+1)
-       
-        
         
 
 def create_spatial_filter(raw_b,config):
@@ -925,8 +892,6 @@ def apply_epoch_selection(raw_output,config,sfreq):
     selected_epochs_out.drop_bad()
     return selected_epochs_out
 
-
-
 def apply_bad_channels(raw,config):
     '''
     Function that applies bad channels (either from previous run or current pre processing)
@@ -1161,14 +1126,12 @@ while True:  # @noloop remove
                     len2 = len(selected_epochs_sensor)
                     progress_bar2.UpdateBar(0, len2)
 
-                    save_epoch_data_to_txt(selected_epochs_out, config['file_path_sensor'], None)
+                    save_epoch_data_to_txt(selected_epochs_sensor, config['file_path_sensor'], None)
 
                     if config['apply_beamformer']:
                         # Export beamformed epochs
-                        epoch_data_source = extract_epoch_data(
-                            rawSource, config['epoch_length'], config[file_name, 'epochs'], downsampled_sample_frequency)
-                        save_epoch_data_to_txt(epoch_data_source, config['file_path_source'], dict(
-
+                        selected_epochs_source = apply_epoch_selection(raw_source, config, downsampled_sample_frequency)
+                        save_epoch_data_to_txt(selected_epochs_source, config['file_path_source'], dict(
                             eeg=1, mag=1e15, grad=1e13))
 
                 else:  # equals no epoch_output
