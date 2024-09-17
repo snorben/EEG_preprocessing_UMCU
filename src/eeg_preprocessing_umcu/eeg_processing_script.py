@@ -31,7 +31,7 @@ font=font # taken from settings
 settings=settings # taken from settings
 my_image=my_image # taken from settings
 
-EEG_version = "v3.4"
+EEG_version = "v3.5"
 
 # initial values
 progress_value1 = 20
@@ -47,9 +47,9 @@ layout = [
     [sg.Multiline('Run info: \n', autoscroll=True,
                   size=(120, 10), k='-RUN_INFO-', reroute_stdout=True)],  # True=redirect console to window @@@
     [sg.ProgressBar(progress_value1, orientation='h', size=(
-        120, 10), key='progressbar', bar_color=['red', 'grey'])],
+        120, 10), key='progressbar_files', bar_color=['red', 'grey'])],
     [sg.ProgressBar(progress_value2, orientation='h', size=(
-        120, 10), key='progressbar2', bar_color=['#003DA6', 'grey'])],
+        120, 10), key='progressbar_epochs', bar_color=['#003DA6', 'grey'])],
     [sg.Button('Exit')],
     [sg.Column([[my_image]], justification='center')]]
 
@@ -104,7 +104,7 @@ def load_config_file():
     config['previous_run_config_file']=config_file
     
     msg = '\nConfig ' + config_file + ' loaded for rerun\n'
-    window['-RUN_INFO-'].update(msg+'\n', append=True)
+    window['-FILE_INFO-'].update(msg+'\n', append=True)
     
     return config
 
@@ -212,35 +212,6 @@ def ask_beamformer_option(config):
     
     return config
 
-
-# def ask_epoch_selection(config):
-#     tooltip = """Do you want to apply epoch selection?
-#     The alternative is to export uncut data"""
-#     txt = "Do you want to apply epoch selection?"
-#     url = "https://mne.tools/stable/generated/mne.Epochs.html#mne.Epochs.plot"
-#     layout = [[sg.Text(txt, tooltip=tooltip, enable_events=True)],
-#               [sg.Button('Yes'), sg.Button('No')], [sg.Push(), sg.Button('More info...')]]
-#     window = sg.Window("EEG processing input parameters", layout, modal=True, use_custom_titlebar=True, font=font, 
-#                        background_color='white', location=(100, 100))
-#     while True:
-#         event, values = window.read()
-#         if event == 'More info...':
-#             # os.system('cmd /c start chrome '+url) # force to use Chrome
-#             wb.open_new_tab(url)
-#             continue
-#         if event == 'Yes':
-#             config['apply_epoch_selection'] = 1
-#             config = ask_epoch_length(
-#                 config,settings)    # ask epoch length
-#             break
-#         if event == 'No':
-#             config['apply_epoch_selection'] = 0
-#             break
-#         if event in (sg.WIN_CLOSED, 'Ok'):
-#             break
-#     window.close()
-    
-#     return config
 
 def ask_epoch_selection(config):
     if config['rerun']==0 or (config['rerun']==1 and config['apply_epoch_selection']==0): 
@@ -536,7 +507,7 @@ def set_batch_related_names(config):
     config['logfile'] = os.path.join(config['batch_output_subdirectory'], fn)
     fn = config['batch_name'] + '.pkl'
     config['config_file'] = os.path.join(config['batch_output_subdirectory'], fn)
-    print('set_batch_related_names config_file ', config['config_file'])
+    # print('set_batch_related_names config_file ', config['config_file'])
         
     return config
 
@@ -571,7 +542,7 @@ def create_dict():
     Function to create initial dict with starting values for processing.
     '''
     try:
-        print('create_dict')
+        # print('create_dict')
         config = {'apply_average_ref': 1,
                   'apply_epoch_selection': 0,
                   'epoch_length': 0.0,
@@ -620,7 +591,7 @@ def save_epoch_data_to_txt(epoch_data, base, scalings):
 
         msg = 'Output file ' + file_name_out + ' created'
         window['-FILE_INFO-'].update(msg+'\n', append=True)
-        progress_bar2.UpdateBar(i+1)
+        progress_bar_epochs.UpdateBar(i+1)
         
 
 def create_spatial_filter(raw_b,config):
@@ -926,8 +897,8 @@ def apply_spatial_filter(raw, config, spatial_filter):
 window = sg.Window('UMC Utrecht MNE EEG Preprocessing', layout, location=(
     30, 30), size=(1000, 700), finalize=True, font=font)
 
-progress_bar = window.find_element('progressbar')
-progress_bar2 = window.find_element('progressbar2')
+progress_bar_files = window.find_element('progressbar_files')
+progress_bar_epochs = window.find_element('progressbar_epochs')
 
 # config['rerun_new_epoch_selection'] = False # config nog niet
 
@@ -948,7 +919,9 @@ while True:  # @noloop remove
         config = ask_ica_option(config)
         config = ask_beamformer_option(config)
         config = ask_downsample_factor(config,settings)
-
+        msg = 'Loaded config:'
+        window['-RUN_INFO-'].update(msg+'\n', append=True)
+        print_dict(config)
         msg = 'You may now start processing'
         window['-RUN_INFO-'].update(msg+'\n', append=True)
         
@@ -974,13 +947,19 @@ while True:  # @noloop remove
 
         config = ask_downsample_factor(config,settings)
 
-        print (config)
+        
+        msg = 'Created config:'
+        window['-RUN_INFO-'].update(msg+'\n', append=True)
+        print_dict(config)
         msg = 'You may now start processing'
         window['-RUN_INFO-'].update(msg+'\n', append=True)
 
 
     elif event == 'Start processing':
         try:
+            # reset progress bars
+            progress_bar_files.UpdateBar(0,0)
+            progress_bar_epochs.UpdateBar(0,0)
             no_montage_patterns = ["*.vhdr", "*.fif"]
             config['file_pattern'] = settings['input_file_pattern', config['input_file_pattern']]
             
@@ -1009,7 +988,7 @@ while True:  # @noloop remove
                 config=set_file_output_related_names(config) # set output directory for epochs etc. 
                 # add file name to list in config file, to be used in rerun                
                 config['input_file_names'].append(file_name) # add file name to config file, to be used in rerun
-                msg = '\n************ Processing file ' + file_path + ' ************'
+                msg = '\n*** Processing file ' + file_path + ' ***'
                 window['-RUN_INFO-'].update(msg+'\n', append=True)
                 window['-FILE_INFO-'].update(msg+'\n', append=True)
                 
@@ -1043,7 +1022,7 @@ while True:  # @noloop remove
                     msg = 'File ' + file_path + ' skipped'
                     window['-FILE_INFO-'].update(msg+'\n', append=True)
                     filenum += 1
-                    progress_bar.UpdateBar(filenum, lfl)
+                    progress_bar_files.UpdateBar(filenum, lfl)
                     continue
                 
                 # determine max nr_channels (= upper limit of nr of ICA components) @@@
@@ -1124,7 +1103,7 @@ while True:  # @noloop remove
                     # config[selected_indices] #*1
 
                     len2 = len(selected_epochs_sensor)
-                    progress_bar2.UpdateBar(0, len2)
+                    progress_bar_epochs.UpdateBar(0, len2)
 
                     save_epoch_data_to_txt(selected_epochs_sensor, config['file_path_sensor'], None)
 
@@ -1152,28 +1131,28 @@ while True:  # @noloop remove
                     #     config['output_directory'], file_name_sensor)
                     # file_path_sensor = os.path.join(
                     #     config['file_output_subdirectory'], file_name_sensor)
-                    print ('main 1098  file_name_sensor: ',file_name_sensor)
-                    print ('main 1098  file_path_sensor: ',file_name_sensor)
+                    # print ('main 1098  file_name_sensor: ',file_name_sensor)
+                    # print ('main 1098  file_path_sensor: ',file_name_sensor)
 
                     # Save the DataFrame to a text file
                     raw_df.to_csv(config['file_path_sensor'], sep='\t', index=False)
-                    progress_bar2.UpdateBar(1, 1) # epochs
+                    progress_bar_epochs.UpdateBar(1, 1) # epochs
 
                     if config['apply_beamformer']:
                         # @@@ output file aanpassen
-                        rawSource_df = rawSource.to_data_frame(
+                        raw_source_df = raw_source.to_data_frame(
                             picks='eeg', scalings=dict(eeg=1, mag=1e15, grad=1e13))
-                        rawSource_df = rawSource_df.iloc[:, 1:]
-                        rawSource_df = np.round(rawSource_df, decimals=4)
+                        raw_source_df = raw_source_df.iloc[:, 1:]
+                        raw_source_df = np.round(raw_source_df, decimals=4)
                         file_name_source = os.path.basename(
                             root) + "_Source_level.txt"
 
                         # print ('main 1115 apply_beamformer  file_name_source: ',file_name_source)
                         # print ('main 1115 apply_beamformer  file_path_source: ',file_path_source)
-                        rawSource_df.to_csv(config['file_path_source'], sep='\t', index=False)
+                        raw_source_df.to_csv(config['file_path_source'], sep='\t', index=False)
 
                 filenum = filenum+1
-                progress_bar.UpdateBar(filenum, lfl) # files
+                progress_bar_files.UpdateBar(filenum, lfl) # files
                 # end of for loop over files
 
         # except:
