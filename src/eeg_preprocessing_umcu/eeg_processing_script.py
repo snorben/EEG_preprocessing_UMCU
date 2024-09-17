@@ -27,6 +27,9 @@ from mne.datasets import fetch_fsaverage
 # Set the working directory to the script directory
 script_dir = os.path.dirname(os.path.abspath(__file__))
 os.chdir(script_dir)
+font=font # taken from settings
+settings=settings # taken from settings
+my_image=my_image # taken from settings
 
 EEG_version = "v3.4"
 
@@ -210,34 +213,65 @@ def ask_beamformer_option(config):
     return config
 
 
+# def ask_epoch_selection(config):
+#     tooltip = """Do you want to apply epoch selection?
+#     The alternative is to export uncut data"""
+#     txt = "Do you want to apply epoch selection?"
+#     url = "https://mne.tools/stable/generated/mne.Epochs.html#mne.Epochs.plot"
+#     layout = [[sg.Text(txt, tooltip=tooltip, enable_events=True)],
+#               [sg.Button('Yes'), sg.Button('No')], [sg.Push(), sg.Button('More info...')]]
+#     window = sg.Window("EEG processing input parameters", layout, modal=True, use_custom_titlebar=True, font=font, 
+#                        background_color='white', location=(100, 100))
+#     while True:
+#         event, values = window.read()
+#         if event == 'More info...':
+#             # os.system('cmd /c start chrome '+url) # force to use Chrome
+#             wb.open_new_tab(url)
+#             continue
+#         if event == 'Yes':
+#             config['apply_epoch_selection'] = 1
+#             config = ask_epoch_length(
+#                 config,settings)    # ask epoch length
+#             break
+#         if event == 'No':
+#             config['apply_epoch_selection'] = 0
+#             break
+#         if event in (sg.WIN_CLOSED, 'Ok'):
+#             break
+#     window.close()
+    
+#     return config
+
 def ask_epoch_selection(config):
-    tooltip = """Do you want to apply epoch selection?
-    The alternative is to export uncut data"""
-    txt = "Do you want to apply epoch selection?"
-    url = "https://mne.tools/stable/generated/mne.Epochs.html#mne.Epochs.plot"
-    layout = [[sg.Text(txt, tooltip=tooltip, enable_events=True)],
-              [sg.Button('Yes'), sg.Button('No')], [sg.Push(), sg.Button('More info...')]]
-    window = sg.Window("EEG processing input parameters", layout, modal=True, use_custom_titlebar=True, font=font, 
-                       background_color='white', location=(100, 100))
-    while True:
-        event, values = window.read()
-        if event == 'More info...':
-            # os.system('cmd /c start chrome '+url) # force to use Chrome
-            wb.open_new_tab(url)
-            continue
-        if event == 'Yes':
-            config['apply_epoch_selection'] = 1
-            config = ask_epoch_length(
-                config,settings)    # ask epoch length
-            break
-        if event == 'No':
-            config['apply_epoch_selection'] = 0
-            break
-        if event in (sg.WIN_CLOSED, 'Ok'):
-            break
-    window.close()
+    if config['rerun']==0 or (config['rerun']==1 and config['apply_epoch_selection']==0): 
+        tooltip = """Do you want to apply epoch selection?
+        The alternative is to export uncut data"""
+        txt = "Do you want to apply epoch selection?"
+        url = "https://mne.tools/stable/generated/mne.Epochs.html#mne.Epochs.plot"
+        layout = [[sg.Text(txt, tooltip=tooltip, enable_events=True)],
+                  [sg.Button('Yes'), sg.Button('No')], [sg.Push(), sg.Button('More info...')]]
+        window = sg.Window("EEG processing input parameters", layout, modal=True, use_custom_titlebar=True, font=font, 
+                           background_color='white', location=(100, 100))
+        while True:
+            event, values = window.read()
+            if event == 'More info...':
+                # os.system('cmd /c start chrome '+url) # force to use Chrome
+                wb.open_new_tab(url)
+                continue
+            if event == 'Yes':
+                config['apply_epoch_selection'] = 1
+                config = ask_epoch_length(
+                    config,settings)    # ask epoch length
+                break
+            if event == 'No':
+                config['apply_epoch_selection'] = 0
+                break
+            if event in (sg.WIN_CLOSED, 'Ok'):
+                break
+        window.close()
     
     return config
+
 
 
 def ask_input_file_pattern(config, settings):
@@ -602,6 +636,25 @@ def save_epoch_data_to_txt(epoch_data, base, scalings):
         window['-FILE_INFO-'].update(msg+'\n', append=True)
         progress_bar2.UpdateBar(i+1)
         
+def save_epoch_data_to_txt(config, epoch_data, file_suffix, scalings):
+    '''
+    Function that loops over the selected epochs and saves each epoch to a separate .txt file.
+    '''
+    for i in range(len(epoch_data)):
+        epoch_df = epoch_data[i].to_data_frame(picks='eeg', scalings=scalings)
+        epoch_df = epoch_df.drop(columns=['time', 'condition', 'epoch'])
+        epoch_df = np.round(epoch_df, decimals=4)
+        file_name = os.path.basename(
+            root) + file_suffix + "Epoch" + str(i + 1) + ".txt"
+        file_name_out = os.path.join(config['output_directory'], file_name)
+        epoch_df.to_csv(file_name_out, sep='\t', index=False)
+
+        msg = 'Output file ' + file_name_out + ' created'
+        window['-FILE_INFO-'].update(msg+'\n', append=True)
+        progress_bar2.UpdateBar(i+1)
+       
+        
+        
 
 def create_spatial_filter(raw_b,config):
     '''
@@ -873,22 +926,6 @@ def apply_epoch_selection(raw_output,config,sfreq):
     return selected_epochs_out
 
 
-def save_epoch_data_to_txt(config, epoch_data, file_suffix, scalings):
-    '''
-    Function that loops over the selected epochs and saves each epoch to a separate .txt file.
-    '''
-    for i in range(len(epoch_data)):
-        epoch_df = epoch_data[i].to_data_frame(picks='eeg', scalings=scalings)
-        epoch_df = epoch_df.drop(columns=['time', 'condition', 'epoch'])
-        epoch_df = np.round(epoch_df, decimals=4)
-        file_name = os.path.basename(
-            root) + file_suffix + "Epoch" + str(i + 1) + ".txt"
-        file_name_out = os.path.join(config['output_directory'], file_name)
-        epoch_df.to_csv(file_name_out, sep='\t', index=False)
-
-        msg = 'Output file ' + file_name_out + ' created'
-        window['-FILE_INFO-'].update(msg+'\n', append=True)
-        progress_bar2.UpdateBar(i+1)
 
 def apply_bad_channels(raw,config):
     '''
@@ -927,22 +964,21 @@ window = sg.Window('UMC Utrecht MNE EEG Preprocessing', layout, location=(
 progress_bar = window.find_element('progressbar')
 progress_bar2 = window.find_element('progressbar2')
 
-config['rerun_new_epoch_selection'] = False
+# config['rerun_new_epoch_selection'] = False # config nog niet
 
 while True:  # @noloop remove
     # https://trinket.io/pygame/36bf0df5f3, https://github.com/PySimpleGUI/PySimpleGUI/issues/2805
     event, values = window.read()
     if event == "Exit" or event == sg.WIN_CLOSED:
         break
+    # note: dependencies on config['rerun'] are always handled in the ask_ or select_ functions
     if event == "Rerun previous batch" :
         config = load_config_file() # .pkl file
         config['rerun']=1
         config = select_input_file_paths(config, settings) # read from pkl
         config = set_batch_related_names(config) # batch_prefix batch_name batch_output_subdirectory config_file logfile
         config = select_output_directory(config)
-        if not config['apply_epoch_selection']: # already done?
-            config['rerun_new_epoch_selection'] = True ### Nog controleren
-            config = ask_epoch_selection(config) # option to do epoch_selection
+        config = ask_epoch_selection(config) # function will check if epoch_selection has already been made, if not then it will ask
         config = ask_average_ref(config)
         config = ask_ica_option(config)
         config = ask_beamformer_option(config)
@@ -1062,11 +1098,13 @@ while True:  # @noloop remove
 
                 raw_temp = perform_average_reference(raw_temp)
 
-                if config['apply_epoch_selection'] and config['rerun'] == 0:
+                if config['apply_epoch_selection']:
                     config = perform_epoch_selection(raw_temp,config)
+                # if config['apply_epoch_selection'] and config['rerun'] == 0:
+                #     config = perform_epoch_selection(raw_temp,config)
                 
-                if rerun_new_epoch_selection:
-                    config = perform_epoch_selection(raw_temp,config)
+                # if rerun_new_epoch_selection:
+                #     config = perform_epoch_selection(raw_temp,config)
 
 
 
@@ -1167,8 +1205,8 @@ while True:  # @noloop remove
                         file_name_source = os.path.basename(
                             root) + "_Source_level.txt"
 
-                        print ('main 1115 apply_beamformer  file_name_source: ',file_name_source)
-                        print ('main 1115 apply_beamformer  file_path_source: ',file_path_source)
+                        # print ('main 1115 apply_beamformer  file_name_source: ',file_name_source)
+                        # print ('main 1115 apply_beamformer  file_path_source: ',file_path_source)
                         rawSource_df.to_csv(config['file_path_source'], sep='\t', index=False)
 
                 filenum = filenum+1
