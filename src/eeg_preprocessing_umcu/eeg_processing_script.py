@@ -115,7 +115,7 @@ def select_output_directory(config):
         working_directory = os.getcwd()
         layout = [
             [sg.Text(
-                "Select base output directory to save epoch- and log files to\n(Subdirectories will be created for log, epochs etc.", tooltip=tooltip)],
+                "Select base output directory to save epoch- and log files to\n(Subdirectories will be created for log, epochs etc.)", tooltip=tooltip)],
             [sg.InputText(default_text=working_directory, key="-FOLDER_PATH-"),
              sg.FolderBrowse(initial_folder=working_directory)],
             [sg.Button('Select')]
@@ -1044,6 +1044,7 @@ while True:  # @noloop remove
 
                 if config['apply_epoch_selection']:
                     config = perform_epoch_selection(raw_temp,config)
+                
                 # if config['apply_epoch_selection'] and config['rerun'] == 0:
                 #     config = perform_epoch_selection(raw_temp,config)
                 
