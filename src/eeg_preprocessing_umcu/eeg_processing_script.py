@@ -31,7 +31,7 @@ font=font # taken from settings
 settings=settings # taken from settings
 my_image=my_image # taken from settings
 
-EEG_version = "v3.5"
+EEG_version = "v3.6"
 
 # initial values
 progress_value1 = 20
