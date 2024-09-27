@@ -16,14 +16,45 @@ mne.set_config('MNE_BROWSER_BACKEND', 'matplotlib')  # Setting for Spyder
 # deaults for gui user input
 sg.theme('Default1')
 font = ("Ubuntu Medium", 14)
+f_font=("Courier New", 12) # font filter frequency inputs
+f_size=5 # font size filter frequency inputs
 my_image = sg.Image('UMC_logo.png')  # UMC logo
 sg.set_options(tooltip_font=(16))  # tootip size
 settings={}
 
+# script run defaults
 settings['default_epoch_length'] = 8
 settings['default_ica_components'] = 25
 settings['default_downsample_factor'] = 1
 settings['sample_frequencies'] = [250, 256, 500, 512, 1000, 1024, 1250, 2000, 2048, 5000]
+settings['apply_average_ref'] = 1
+settings['apply_epoch_selection'] = 0
+settings['epoch_length'] = 0.0
+settings['apply_ica'] = 0
+settings['rerun'] = 0
+settings['apply_beamformer'] = 0
+settings['channels_to_be_dropped_selected'] = 0
+settings['nr_ica_components'] = 0
+settings['max_channels'] = 0
+settings['skip_input_file'] = 0
+settings['file_pattern'] = '-'
+settings['input_file_pattern'] = '-'
+settings['montage'] = '-'
+settings['input_file_names'] = []
+settings['input_file_paths'] = []
+settings['channel_names'] = []
+settings['sample_frequency'] = 250
+settings['config_file'] = ' '
+settings['log_file'] = ' '
+settings['previous_run_config_file'] = ' '
+settings['output_directory'] = ' '
+settings['batch_output_subdirectory'] = ' '
+settings['file_output_subdirectory'] = ' '
+settings['input_directory'] = ' '
+settings['batch_name'] = ' '
+settings['frequency_bands_modified'] = 0
+settings['batch_prefix'] = ' '
+
 
 settings['montage',".txt_bio32"] = "biosemi32"
 settings['montage',".txt_bio64"] = "biosemi64"
@@ -52,6 +83,19 @@ settings['input_file_pattern',".edf_10-20"] = "*.edf"
 settings['input_file_pattern',".edf_GSN-Hydrocel_64"] = "*.edf"
 settings['input_file_pattern',".eeg"] = "*.vhdr"
 settings['input_file_pattern',".fif"] = "*.fif"
+
+# defaults for settings['filter_frequencies'
+settings['filter_frequencies','delta_low'] = 0.5
+settings['filter_frequencies','delta_high'] = 4
+settings['filter_frequencies','theta_low'] = 4
+settings['filter_frequencies','theta_high'] = 8
+settings['filter_frequencies','alpha_low'] = 8
+settings['filter_frequencies','alpha_high'] = 13
+settings['filter_frequencies','beta_low'] = 13
+settings['filter_frequencies','beta_high'] = 25
+settings['filter_frequencies','broadband_low'] = 0.5
+settings['filter_frequencies','broadband_high'] = 48
+
 
 settings['input_file_patterns'] = ['.bdf_32', '.bdf_64', '.bdf_128', '.edf_bio32', '.edf_bio64',
                        '.edf_bio128', '.edf_10-20', '.fif', '.eeg','.edf_GSN-Hydrocel_64', '.txt_bio32', '.txt_bio64', '.txt_10-20']

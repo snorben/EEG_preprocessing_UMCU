@@ -28,10 +28,12 @@ from mne.datasets import fetch_fsaverage
 script_dir = os.path.dirname(os.path.abspath(__file__))
 os.chdir(script_dir)
 font=font # taken from settings
+f_font=f_font  # font filter frequency inputs taken from settings
+f_size=f_size # font size filter frequency inputs taken from settings
 settings=settings # taken from settings
 my_image=my_image # taken from settings
 
-EEG_version = "v3.6"
+EEG_version = "v3.6a"
 
 # initial values
 progress_value1 = 20
@@ -107,6 +109,75 @@ def load_config_file():
     window['-FILE_INFO-'].update(msg+'\n', append=True)
     
     return config
+
+
+
+def ask_update_frequency_bands(config):
+    txt = "Do you want to modify filter frequencies?"  # @@@
+    tooltip = """Do you want to modify filter frequencies?"""
+    layout = [[sg.Text(txt, tooltip=tooltip, enable_events=True)],
+              [sg.Button('Yes'), sg.Button('No')]]
+    window = sg.Window("EEG processing input parameters", layout,  font=font,modal=True, use_custom_titlebar=True, 
+                       background_color='white', location=(100, 100))
+    while True:
+        event, values = window.read()
+        if event == 'Yes':
+            config['frequency_bands_modified'] = 1
+            print_dict(config) # check
+            config = update_frequency_bands(config)
+            print_dict(config) # check
+            break
+        if event in (sg.WIN_CLOSED, 'Ok'):
+            break
+    window.close()
+    
+    return config
+
+def update_frequency_bands(config):  
+    tooltip=""
+    layout = [
+        [sg.Text(
+            "Filter cut-off frequencies", tooltip=tooltip,font=font)],
+        [sg.Text('delta_low     '), sg.Input(default_text= config['filter_frequencies','delta_low'], key='-FILTER_DL-',size=f_size),
+         sg.Text('delta_high    '), sg.Input(default_text= config['filter_frequencies','delta_high'], key='-FILTER_DH-',size=f_size)],
+        [sg.Text('theta_low     '), sg.Input(default_text= config['filter_frequencies','theta_low'], key='-FILTER_TL-',size=f_size),
+         sg.Text('theta_high    '), sg.Input(default_text= config['filter_frequencies','theta_high'], key='-FILTER_TH-',size=f_size)],
+        [sg.Text('alpha_low     '), sg.Input(default_text= config['filter_frequencies','alpha_low'], key='-FILTER_AL-',size=f_size),
+         sg.Text('alpha_high    '), sg.Input(default_text= config['filter_frequencies','alpha_high'], key='-FILTER_AH-',size=f_size)],
+        [sg.Text('beta_low      '), sg.Input(default_text= config['filter_frequencies','beta_low'], key='-FILTER_BL-',size=f_size),
+         sg.Text('beta_high     '), sg.Input(default_text= config['filter_frequencies','beta_high'], key='-FILTER_BH-',size=f_size)],
+        [sg.Text('broadband_low '), sg.Input(default_text= config['filter_frequencies','broadband_low'], key='-FILTER_BRL-',size=f_size),
+         sg.Text('broadband_high'), sg.Input(default_text= config['filter_frequencies','broadband_high'], key='-FILTER_BRH-',size=f_size)],
+        [sg.Button('Select',font=font)]
+    ]
+    window = sg.Window("Filter", layout, modal=True, use_custom_titlebar=True, font=f_font, 
+                       background_color='white', location=(100, 100))
+    while True:
+        event, values = window.read()
+        if event == 'Select':
+            try:
+                config['filter_frequencies',"delta_low"] = values["-FILTER_DL-"]
+                config['filter_frequencies',"delta_high"] = values["-FILTER_DH-"]
+                config['filter_frequencies',"theta_low"]= values['-FILTER_TL-']
+                config['filter_frequencies',"theta_high"]= values['-FILTER_TH-']
+                config['filter_frequencies',"alpha_low"]= values['-FILTER_AL-']
+                config['filter_frequencies',"alpha_high"]= values['-FILTER_AH-']
+                config['filter_frequencies',"beta_low"]= values['-FILTER_BL-']
+                config['filter_frequencies',"beta_high"]= values['-FILTER_BH-']
+                config['filter_frequencies',"broadband_low"]= values['-FILTER_BRL-']
+                config['filter_frequencies',"broadband_high"]= values['-FILTER_BRH-']
+                print_dict(config) # check
+                break
+            except:
+                sg.popup_error('No valid frequencies', location=(100, 100),font=font)
+                window.close()
+        if event in (sg.WIN_CLOSED, 'Ok'):
+            break
+    window.close()
+
+    return config
+
+
 
 
 def select_output_directory(config):
@@ -542,33 +613,35 @@ def create_dict():
     Function to create initial dict with starting values for processing.
     '''
     try:
-        # print('create_dict')
-        config = {'apply_average_ref': 1,
-                  'apply_epoch_selection': 0,
-                  'epoch_length': 0.0,
-                  'apply_ica': 0,
-                  'rerun': 0,
-                  'apply_beamformer': 0,
-                  'channels_to_be_dropped_selected': 0,
-                  'nr_ica_components': 0,
-                  'max_channels': 0,  # max channels for IA, determine per input file
-                  'skip_input_file': 0,
-                  'file_pattern': '-',
-                  'input_file_pattern': "-",
-                  'montage': '-',
-                  'input_file_names': [],  # file name without path, selected by user or used in rerun run
-                  'input_file_paths': [],  # full file paths
-                  'channel_names': [],  # file names only
-                  'sample_frequency': 250,                  
-                  'config_file': ' ',  # used to save config to disk
-                  'log_file': ' ',  # used to save config to disk
-                  'previous_run_config_file ': ' ',  # used for rerun function
-                  'output_directory': ' ',
-                  'batch_output_subdirectory': ' ',
-                  'file_output_subdirectory': ' ',
-                  'input_directory': ' ', # set in file loop
-                  'batch_name': ' ',
-                  'batch_prefix': ' '}
+        # # print('create_dict')
+        # config = {'apply_average_ref': 1,
+        #           'apply_epoch_selection': 0,
+        #           'epoch_length': 0.0,
+        #           'apply_ica': 0,
+        #           'rerun': 0,
+        #           'apply_beamformer': 0,
+        #           'channels_to_be_dropped_selected': 0,
+        #           'nr_ica_components': 0,
+        #           'max_channels': 0,  # max channels for IA, determine per input file
+        #           'skip_input_file': 0,
+        #           'file_pattern': '-',
+        #           'input_file_pattern': "-",
+        #           'montage': '-',
+        #           'input_file_names': [],  # file name without path, selected by user or used in rerun run
+        #           'input_file_paths': [],  # full file paths
+        #           'channel_names': [],  # file names only
+        #           'sample_frequency': 250,                  
+        #           'config_file': ' ',  # used to save config to disk
+        #           'log_file': ' ',  # used to save config to disk
+        #           'previous_run_config_file ': ' ',  # used for rerun function
+        #           'output_directory': ' ',
+        #           'batch_output_subdirectory': ' ',
+        #           'file_output_subdirectory': ' ',
+        #           'input_directory': ' ', # set in file loop
+        #           'batch_name': ' ',
+        #           'frequency_bands_modified' : 0,
+        #           'batch_prefix': ' '}
+        config=settings # read defaults from settings file
 
 
         return config
@@ -911,6 +984,7 @@ while True:  # @noloop remove
     if event == "Rerun previous batch" :
         config = load_config_file() # .pkl file
         config['rerun']=1
+        config = ask_update_frequency_bands(config)
         config = select_input_file_paths(config, settings) # read from pkl
         config = set_batch_related_names(config) # batch_prefix batch_name batch_output_subdirectory config_file logfile
         config = select_output_directory(config)
@@ -929,6 +1003,7 @@ while True:  # @noloop remove
         print('Enter parameters for this batch')
         config = create_dict()  # before file loop
         config['rerun'] = 0
+        config = ask_update_frequency_bands(config)
         config = select_input_file_paths(config, settings) # gui file explorer
         config = select_output_directory(config) # gui file explorer
         config = set_batch_related_names(config) # batch_prefix batch_name batch_output_subdirectory config_file logfile
