@@ -42,7 +42,7 @@ layout = [
              justification='c'), sg.Text(EEG_version)],
     [sg.Multiline('File info:\n', autoscroll=True, size=(
         120, 10), k='-FILE_INFO-', reroute_stdout=True)],  # True=redirect console to window @@@
-    [sg.Text('Functions:'), sg.Button(
+    [sg.Text('Functions: '), sg.Button(
         'Enter parameters for this batch'), sg.Button('Rerun previous batch'),sg.Button('Start processing')],
     [sg.Multiline('Run info:\n', autoscroll=True,
                   size=(120, 10), k='-RUN_INFO-', reroute_stdout=True)],  # True=redirect console to window @@@
@@ -620,7 +620,7 @@ def create_dict():
         config=settings # read defaults from settings file
         return config
     except:
-        sg.popup_error('Error create_dict:', location=(100, 100),font=font)
+        sg.popup_error('Error create_dict: ', location=(100, 100),font=font)
         window.close()
 
 def save_epoch_data_to_txt(epoch_data, base, scalings):
@@ -728,7 +728,7 @@ def create_raw(config,montage):
         #config['sample_frequency'] = raw.info["sfreq"] # Niet nodig toch?
         missing = df.columns[df.isna().any()].tolist()
         if missing != '[]':
-            sg.popup_ok('Warning:channels with missing values found:',
+            sg.popup_ok('Warning:channels with missing values found: ',
                         missing, "please drop these channel(s)!", location=(100, 100),font=font)
     elif config['file_pattern'] == "*.bdf":
         raw = mne.io.read_raw_bdf(file_path, preload=True)
@@ -786,7 +786,7 @@ def perform_ica (raw,raw_temp,config):
         pct = round(100 * var, 2)
         cumul_pct += pct
         msg = 'Explained variance for ICA component ' + \
-            str(idx) + ':' + str(pct) + '%' + \
+            str(idx) + ': ' + str(pct) + '%' + \
             ' ('+str(round(cumul_pct, 1)) + ' %)'
         window['-RUN_INFO-'].update(msg+'\n', append=True)
 
@@ -934,7 +934,6 @@ window = sg.Window('UMC Utrecht MNE EEG Preprocessing', layout, location=(
 progress_bar_files = window.find_element('progressbar_files')
 progress_bar_epochs = window.find_element('progressbar_epochs')
 
-# config['rerun_new_epoch_selection'] = False # config nog niet
 
 while True:# @noloop remove
     # https://trinket.io/pygame/36bf0df5f3, https://github.com/PySimpleGUI/PySimpleGUI/issues/2805
@@ -954,7 +953,7 @@ while True:# @noloop remove
         config = ask_ica_option(config)
         config = ask_beamformer_option(config)
         config = ask_downsample_factor(config,settings)
-        msg = 'Loaded config:'
+        msg = 'Loaded config: '
         window['-RUN_INFO-'].update(msg+'\n', append=True)
         print_dict(config)
         msg = 'You may now start processing'
@@ -984,7 +983,7 @@ while True:# @noloop remove
         config = ask_downsample_factor(config,settings)
 
         
-        msg = 'Created config:'
+        msg = 'Created config: '
         window['-RUN_INFO-'].update(msg+'\n', append=True)
         print_dict(config)
         msg = 'You may now start processing'
@@ -1071,7 +1070,6 @@ while True:# @noloop remove
                 if config['apply_beamformer']:
                     spatial_filter = perform_beamform(raw_temp,config)
                 
-                
                 raw_temp,temporary_sample_f = perform_temp_down_sampling(raw_temp,config)
                 
                 plot_power_spectrum(raw_temp, filtered=True)
@@ -1080,14 +1078,6 @@ while True:# @noloop remove
 
                 if config['apply_epoch_selection']:
                     config = perform_epoch_selection(raw_temp,config)
-                
-                # if config['apply_epoch_selection'] and config['rerun'] == 0:
-                #     config = perform_epoch_selection(raw_temp,config)
-                
-                # if rerun_new_epoch_selection:
-                #     config = perform_epoch_selection(raw_temp,config)
-
-
 
                 # ********** Preparation of the final raw file and epochs for export **********                
                 raw = apply_bad_channels(raw,config)
@@ -1137,7 +1127,6 @@ while True:# @noloop remove
                 # Create output epochs and export to .txt
                 if config['apply_epoch_selection']:# rename to epoch_output #*3
                     selected_epochs_sensor = apply_epoch_selection(raw, config, config['downsampled_sample_frequency'])
-                    # config[selected_indices] #*1
 
                     len2 = len(selected_epochs_sensor)
                     progress_bar_epochs.UpdateBar(0, len2)
@@ -1161,16 +1150,6 @@ while True:# @noloop remove
                     file_name_sensor = os.path.basename(
                         root) + "_Sensor_level.txt"
 
-
-                    # Define the output file path
-                    # @@@outputfile aanpassen
-                    # file_path_sensor = os.path.join(
-                    #     config['output_directory'], file_name_sensor)
-                    # file_path_sensor = os.path.join(
-                    #     config['file_output_subdirectory'], file_name_sensor)
-                    # print ('main 1098  file_name_sensor:',file_name_sensor)
-                    # print ('main 1098  file_path_sensor:',file_name_sensor)
-
                     # Save the DataFrame to a text file
                     raw_df.to_csv(config['file_path_sensor'], sep='\t', index=False)
                     progress_bar_epochs.UpdateBar(1, 1) # epochs
@@ -1183,9 +1162,6 @@ while True:# @noloop remove
                         raw_source_df = np.round(raw_source_df, decimals=settings['output_txt_decimals'])
                         file_name_source = os.path.basename(
                             root) + "_Source_level.txt"
-
-                        # print ('main 1115 apply_beamformer  file_name_source:',file_name_source)
-                        # print ('main 1115 apply_beamformer  file_path_source:',file_path_source)
                         raw_source_df.to_csv(config['file_path_source'], sep='\t', index=False)
 
                 filenum = filenum+1
@@ -1206,14 +1182,14 @@ while True:# @noloop remove
             with open(fn, "wt", encoding='UTF-8') as f:
                 f.write(window['-RUN_INFO-'].get())
             sg.popup_error_with_traceback(
-                'Error - info:', e)
+                'Error - info: ', e)
             # window.close()
             # break
 
         # write config to pkl file
         print_dict(config)
         fn=write_config_file(config)
-        msg = 'Config created for this batch (to be used for rerun) :'+fn
+        msg = 'Config created for this batch (to be used for rerun) : '+fn
         window['-FILE_INFO-'].update(msg+'\n', append=True)
         # write log file
         fn = config['logfile']
@@ -1221,7 +1197,7 @@ while True:# @noloop remove
             f.write(window['-RUN_INFO-'].get())
         with open(fn, "a", encoding='UTF-8') as f:
             f.write(window['-FILE_INFO-'].get())
-        msg = 'Log file created:' + fn
+        msg = 'Log file created: ' + fn
         window['-FILE_INFO-'].update(msg+'\n', append=True)
         msg = 'Processing complete \n'
         window['-RUN_INFO-'].update(msg+'\n', append=True)
