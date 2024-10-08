@@ -20,11 +20,29 @@
 | SonarCloud                         | [![sonarcloud](https://github.com/snorben/eeg_preprocessing_umcu/actions/workflows/sonarcloud.yml/badge.svg)](https://github.com/snorben/eeg_preprocessing_umcu/actions/workflows/sonarcloud.yml) |
 | MarkDown link checker              | [![markdown-link-check](https://github.com/snorben/eeg_preprocessing_umcu/actions/workflows/markdown-link-check.yml/badge.svg)](https://github.com/snorben/eeg_preprocessing_umcu/actions/workflows/markdown-link-check.yml) |
 
-## How to use eeg_preprocessing_umcu
+## What is this software?
 
-eeg preprocessing
+With our software, we hope to provide users with an accessible way to preprocess resting-state EEG files, while still including powerful analysis tools. We do this by combining several functions from the MNE (MEG/EEG preprocessing) open-source project. By using an intuitive graphical user interface on top of a Python script, we hope that our software is easy to start using without coding experience, while still allowing more experienced users to adapt the software to their needs by altering the underlying code. 
 
-The project setup is documented in [project_setup.md](project_setup.md). Feel free to remove this document (and/or the link to this document) if you don't need it.
+The software is currently able to:
+- Open EEG files of type .txt, .bdf, .edf, .eeg and .fif.
+- Open a single EEG or choose analysis settings for an entire batch of files.
+- Apply a montage to the raw EEG (including electrode coordinates necessary for some analyses).
+- Drop bad channels entirely.
+- Interpolate bad channels after visual inspection.
+- Apply an average reference.
+- Apply independent component analysis to remove artefacts.
+- Apply beamformer source reconstruction to the EEG.
+- Down sample the file to a lower sample frequency.
+- Perform interactive visual epoch selection.
+- Perform filtering in different frequency bands and broadband output.
+- After performing analyses on a batch, rerun the batch with preservation of channel and epoch selection.
+- Log the chosen settings and performed analyses steps in a log file.
+
+The software is not (yet) able to:
+- Analyse task EEG data.
+- Calculate quantitative features on the output epochs (coming in the near future).
+- Open EEG files with data types not mentioned previously.
 
 ## Installation
 
