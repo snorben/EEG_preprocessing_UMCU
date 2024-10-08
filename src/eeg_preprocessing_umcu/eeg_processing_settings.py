@@ -21,6 +21,7 @@ f_size=5 # font size filter frequency inputs
 my_image = sg.Image('UMC_logo.png')  # UMC logo
 sg.set_options(tooltip_font=(16))  # tootip size
 settings={}
+filter_settings={}
 
 # script run defaults
 settings['default_epoch_length'] = 8
@@ -86,18 +87,23 @@ settings['input_file_pattern',".edf_GSN-Hydrocel_64"] = "*.edf"
 settings['input_file_pattern',".eeg"] = "*.vhdr"
 settings['input_file_pattern',".fif"] = "*.fif"
 
-# defaults for settings['filter_frequencies'
+# defaults for frequency band filter settings
+settings['frequency_bands'] = ("delta_low","delta_high","theta_low","theta_high","alpha_low",
+                               "alpha_high","beta1_low", "beta1_high","beta2_low","beta2_high",
+                               "broadband_low","broadband_high")
+
 settings['cut_off_frequency','delta_low'] = 0.5
 settings['cut_off_frequency','delta_high'] = 4
 settings['cut_off_frequency','theta_low'] = 4
 settings['cut_off_frequency','theta_high'] = 8
 settings['cut_off_frequency','alpha_low'] = 8
 settings['cut_off_frequency','alpha_high'] = 13
-settings['cut_off_frequency','beta_low'] = 13
-settings['cut_off_frequency','beta_high'] = 25
+settings['cut_off_frequency','beta1_low'] = 13
+settings['cut_off_frequency','beta1_high'] = 20
+settings['cut_off_frequency','beta2_low'] = 20
+settings['cut_off_frequency','beta2_high'] = 30
 settings['cut_off_frequency','broadband_low'] = 0.5
-settings['cut_off_frequency','broadband_high'] = 48
-
+settings['cut_off_frequency','broadband_high'] = 47
 
 settings['input_file_patterns'] = ['.bdf_32', '.bdf_64', '.bdf_128', '.edf_bio32', '.edf_bio64',
                        '.edf_bio128', '.edf_10-20', '.fif', '.eeg','.edf_GSN-Hydrocel_64', '.txt_bio32', '.txt_bio64', '.txt_10-20']
@@ -108,6 +114,5 @@ settings['load_config_file','text']="Select a previously created .pkl file"
 settings['input_file_paths','type_EEG']=(("EEG .txt Files", "*.txt"), ("EEG .bdf Files", "*.bdf"),
             ("EEG .vhdr Files", "*.vhdr"), ("EEG .edf Files", "*.edf"), ("Fif", "*.fif")) # note the comma...
 settings['input_file_paths','text']="Select input EEG file(s) - on Mac use 'Options' to filter file types "  
-settings['output_txt_decimals']=4 # used in np.round
 
-
+settings['output_txt_decimals']=4 # used in np.round to round down exported txt files

@@ -29,6 +29,7 @@ font=font # taken from settings
 f_font=f_font  # font filter frequency inputs taken from settings
 f_size=f_size # font size filter frequency inputs taken from settings
 settings=settings # taken from settings
+filter_settings=filter_settings
 my_image=my_image # taken from settings
 
 EEG_version = "v3.7"
@@ -162,8 +163,10 @@ def update_frequency_bands(config):
          sg.Text('theta_high    '), sg.Input(default_text= config['cut_off_frequency','theta_high'], key='-FILTER_TH-',size=f_size)],
         [sg.Text('alpha_low     '), sg.Input(default_text= config['cut_off_frequency','alpha_low'], key='-FILTER_AL-',size=f_size),
          sg.Text('alpha_high    '), sg.Input(default_text= config['cut_off_frequency','alpha_high'], key='-FILTER_AH-',size=f_size)],
-        [sg.Text('beta_low      '), sg.Input(default_text= config['cut_off_frequency','beta_low'], key='-FILTER_BL-',size=f_size),
-         sg.Text('beta_high     '), sg.Input(default_text= config['cut_off_frequency','beta_high'], key='-FILTER_BH-',size=f_size)],
+        [sg.Text('beta1_low      '), sg.Input(default_text= config['cut_off_frequency','beta1_low'], key='-FILTER_B1L-',size=f_size),
+         sg.Text('beta1_high     '), sg.Input(default_text= config['cut_off_frequency','beta1_high'], key='-FILTER_B1H-',size=f_size)],
+        [sg.Text('beta2_low      '), sg.Input(default_text= config['cut_off_frequency','beta2_low'], key='-FILTER_B2L-',size=f_size),
+         sg.Text('beta2_high     '), sg.Input(default_text= config['cut_off_frequency','beta2_high'], key='-FILTER_B2H-',size=f_size)],
         [sg.Text('broadband_low '), sg.Input(default_text= config['cut_off_frequency','broadband_low'], key='-FILTER_BRL-',size=f_size),
          sg.Text('broadband_high'), sg.Input(default_text= config['cut_off_frequency','broadband_high'], key='-FILTER_BRH-',size=f_size)],
         [sg.Button('Select',font=font)]
@@ -180,8 +183,10 @@ def update_frequency_bands(config):
                 config['cut_off_frequency',"theta_high"]= values['-FILTER_TH-']
                 config['cut_off_frequency',"alpha_low"]= values['-FILTER_AL-']
                 config['cut_off_frequency',"alpha_high"]= values['-FILTER_AH-']
-                config['cut_off_frequency',"beta_low"]= values['-FILTER_BL-']
-                config['cut_off_frequency',"beta_high"]= values['-FILTER_BH-']
+                config['cut_off_frequency',"beta1_low"]= values['-FILTER_B1L-']
+                config['cut_off_frequency',"beta1_high"]= values['-FILTER_B1H-']
+                config['cut_off_frequency',"beta2_low"]= values['-FILTER_B2L-']
+                config['cut_off_frequency',"beta2_high"]= values['-FILTER_B2H-']
                 config['cut_off_frequency',"broadband_low"]= values['-FILTER_BRL-']
                 config['cut_off_frequency',"broadband_high"]= values['-FILTER_BRH-']
                 config['frequency_bands_modified'] = 1
@@ -617,25 +622,12 @@ def set_file_output_related_names(config):
 def create_dict():
     '''     Function to create initial dict with starting values for processing.     '''
     try:
-        config=settings # read defaults from settings file
+        config=settings# read defaults from settings file
         return config
     except:
         sg.popup_error('Error create_dict: ', location=(100, 100),font=font)
         window.close()
-
-def save_epoch_data_to_txt(epoch_data, base, scalings):
-    '''     Function to save an MNE epoch object to txt files.      '''
-    for i in range(len(epoch_data)):
-        epoch_df = epoch_data[i].to_data_frame(picks='eeg', scalings=scalings)
-        epoch_df = epoch_df.drop(columns=['time', 'condition', 'epoch'])
-        epoch_df = np.round(epoch_df, decimals=settings['output_txt_decimals'])
-        file_name_out = base + "_Epoch" + str(i + 1) + ".txt"
-        epoch_df.to_csv(file_name_out, sep='\t', index=False)
-        msg = 'Output file ' + file_name_out + ' created'
-        window['-FILE_INFO-'].update(msg+'\n', append=True)
-        progress_bar_epochs.UpdateBar(i+1)
         
-
 def create_spatial_filter(raw_b,config):
     '''
     Function used to create a spatial filter for the LCMV beamforming method. 
@@ -703,8 +695,7 @@ def create_spatial_filter(raw_b,config):
                                )  # *2
     return spatial_filter
 
-  
-def create_raw(config,montage):
+def create_raw(config,montage,no_montage_files):
     '''
     Function used to load a raw EEG file using the correct MNE function based on the file type that has to be
     loaded (.txt, .bdf, .eeg or .edf). Note:for .eeg files the header (.vhdr) is primarily loaded by MNE. For
@@ -739,10 +730,11 @@ def create_raw(config,montage):
     elif config['file_pattern'] == "*.fif":
         raw = mne.io.read_raw_fif(file_path, preload=True, )
         raw.pick_types(eeg=True, meg=False, eog=False)
-        raw.set_montage(montage = montage, on_missing ='ignore')
-        config['sample_frequency'] = raw.info["sfreq"]
+    
+    if config['file_pattern'] not in no_montage_files:
+        raw.set_montage(montage=montage, on_missing='ignore')
+    config['sample_frequency'] = raw.info["sfreq"]
     return raw, config
-
 
 def update_channels_to_be_dropped (raw,config):
     '''     Function to ask channels_to_be_dropped     '''
@@ -750,7 +742,6 @@ def update_channels_to_be_dropped (raw,config):
     channels_to_be_dropped = select_channels_to_be_dropped(channel_names)  # ask user to select
     config['channels_to_be_dropped'] = channels_to_be_dropped # store for rerun function
     return raw,config
-
 
 def perform_ica (raw,raw_temp,config):
     '''     Function to perform ICA     '''
@@ -794,7 +785,6 @@ def perform_ica (raw,raw_temp,config):
     
     return raw_temp,ica,config
 
-
 def perform_bad_channels_selection(raw,config):
     '''
     Function that applies MNE plotting to interactively select bad channels and save these to the config. 
@@ -806,9 +796,7 @@ def perform_bad_channels_selection(raw,config):
         raw.ch_names), block=True, title="Bandpass filtered data")
 
     config[file_name, 'bad'] = raw.info['bads']  # *1 ### Aparte bad_channels variable is nu weg
-    
     return raw,config
-
 
 def plot_power_spectrum(raw, filtered=False):
     '''
@@ -825,7 +813,6 @@ def plot_power_spectrum(raw, filtered=False):
     fig.tight_layout(rect=[0, 0, 1, 0.95])
     fig.canvas.draw()   
     
-    
 def perform_temp_down_sampling(raw,config):
     '''
     Function that down samples the temporary raw EEG to 250 or 256 Hz depending on the sample frequency
@@ -834,17 +821,14 @@ def perform_temp_down_sampling(raw,config):
     temporary_sample_f = 256 if config['sample_frequency'] % 256 == 0 else 250
     print("temp. sample fr:", temporary_sample_f)
     raw.resample(temporary_sample_f, npad="auto")
-    
     return raw, temporary_sample_f
 
-    
 def perform_average_reference(raw):
     '''
     Function that applies a global average reference on the 'eeg' type channels 
     of the raw EEG.
     '''
     raw.set_eeg_reference('average', projection=True, ch_type='eeg')
-    
     raw.apply_proj()
     return raw
 
@@ -883,19 +867,46 @@ def perform_epoch_selection(raw,config):
 
     config[file_name, 'epochs'] = epochs.selection  # *1
     return config
-    
  
-def apply_epoch_selection(raw_output,config,sfreq):
+def apply_epoch_selection(raw_output,config,sfreq,filtering=False,l_freq=None,h_freq=None):
     '''
     Function that applies the epoch selection made earlier (either in a previous run
     or during current pre processing) to the raw EEG used for saving output to file.
-    '''
+    Filtering is optionally applied before applying the epoch selection.
+    ''' 
+    
+    if filtering:
+        raw_output = filter_output_raw(raw_output,config,l_freq,h_freq)
+    
     events_out = mne.make_fixed_length_events(raw_output, duration=config['epoch_length'])
     epochs_out = mne.Epochs(raw_output, events=events_out, tmin=0, tmax=(config['epoch_length'] - \
         (1 / sfreq)), baseline=(0, config['epoch_length']))
     selected_epochs_out = epochs_out[config[file_name, 'epochs']]
     selected_epochs_out.drop_bad()
     return selected_epochs_out
+
+def filter_output_raw(raw_output,config,l_freq,h_freq):
+    '''
+    Applys a FIR bandpass filter to the raw EEG object. If either ICA or Beamforming is also applied,
+    bandpass filtering at 0.5-45 Hz (or broader frequencies) is not performed a second time. The transition
+    band is calculated in a separate function.
+    '''
+    l_freq = float(l_freq)
+    h_freq = float(h_freq)
+    l_trans = calc_filt_transition(l_freq)
+    h_trans = calc_filt_transition(h_freq)
+    if (config['apply_beamformer'] or config['apply_ica']) and (l_freq <= 0.5):
+        l_freq = None
+        print("No additional (<) 0.5 Hz high pass filter applied, already broadband filtered before beamformer and/or ICA")
+    
+    if (config['apply_beamformer'] or config['apply_ica']) and (h_freq >= 45):
+        h_freq = None
+        print("No additional (>) 45 Hz low pass filter applied, already broadband filtered before beamformer and/or ICA")
+    
+    if not (l_freq==None and h_freq==None):
+        raw_output= raw_output.copy().filter(l_freq=l_freq, h_freq=h_freq,
+            picks='eeg',l_trans_bandwidth=l_trans, h_trans_bandwidth=h_trans)
+    return raw_output
 
 def apply_bad_channels(raw,config):
     '''
@@ -926,6 +937,63 @@ def apply_spatial_filter(raw, config, spatial_filter):
     window['-RUN_INFO-'].update(msg+'\n', append=True)
     return raw_source
 
+def save_epoch_data_to_txt(epoch_data, base, scalings=None,filtering=False,l_freq=0.0,h_freq=1000.0):
+    '''     Function to save an MNE epoch object to txt files.      '''
+    l_freq=float(l_freq)
+    h_freq=float(h_freq)
+    for i in range(len(epoch_data)):
+        epoch_df = epoch_data[i].to_data_frame(picks='eeg', scalings=scalings)
+        epoch_df = epoch_df.drop(columns=['time', 'condition', 'epoch'])
+        epoch_df = np.round(epoch_df, decimals=settings['output_txt_decimals'])
+        
+        if (config['apply_beamformer'] or config['apply_ica']) and l_freq <= 0.5:
+            l_freq = 0.5 # Since both beamformer and ICA already bandpass filter from 0.5 to 45 Hz
+            
+        if (config['apply_beamformer'] or config['apply_ica']) and h_freq >= 45.0:
+            h_freq = 45 # Since both beamformer and ICA already bandpass filter from 0.5 to 45 Hz
+        
+        if filtering or config['apply_beamformer'] or config['apply_ica']:
+            file_name_out = base + "_" + str(l_freq) + "-" + str(h_freq) + " Hz_Epoch_"  + str(i + 1) + ".txt"
+        else:
+            file_name_out = base + "_Epoch_" + str(i + 1) + ".txt"
+        
+        epoch_df.to_csv(file_name_out, sep='\t', index=False)
+        msg = 'Output file ' + file_name_out + ' created'
+        window['-FILE_INFO-'].update(msg+'\n', append=True)
+        progress_bar_epochs.UpdateBar(i+1)
+        
+def calc_filt_transition(cutoff_freq):
+    '''
+    Function that returns the FIR filter transition bandwidth based on the cutoff
+    frequency. Below 5 Hz, this is 0.5 (minimum), while above 15 Hz this is 1.5 Hz
+    (maximum). Below 0.5 Hz, the cutoff frequency is used as transition bandwidth.
+    '''
+    base_transition = min(max(cutoff_freq * 0.1, 0.5), 1.5)
+    return float(min(base_transition, cutoff_freq))
+
+def save_whole_EEG_to_txt(raw_output,config,base,scalings=None,filtering=False,l_freq=0.0,h_freq=1000.0):
+    ''' Function to slightly process the raw EEG object and export it to one continuous .txt file. '''
+    l_freq=float(l_freq)
+    h_freq=float(h_freq)
+    
+    raw_df = raw_output.to_data_frame(picks='eeg', scalings=scalings)
+    raw_df = raw_df.iloc[:, 1:]
+    raw_df = np.round(raw_df, decimals=config['output_txt_decimals'])
+    
+    if (config['apply_beamformer'] or config['apply_ica']) and l_freq <= 0.5:
+        l_freq = 0.5 # Since both beamformer and ICA already bandpass filter from 0.5 to 45 Hz
+        
+    if (config['apply_beamformer'] or config['apply_ica']) and h_freq >= 45.0:
+        h_freq = 45 # Since both beamformer and ICA already bandpass filter from 0.5 to 45 Hz
+    
+    if filtering or config['apply_beamformer'] or config['apply_ica']:
+        file_name_out = base + "_" + str(l_freq) + "-" + str(h_freq) + "_" + "Hz.txt"
+    else:
+        file_name_out = base + ".txt"
+    
+    raw_df.to_csv(file_name_out, sep='\t', index=False)
+
+
 ##################################################################################
 
 window = sg.Window('UMC Utrecht MNE EEG Preprocessing', layout, location=(
@@ -944,15 +1012,15 @@ while True:# @noloop remove
     if event == "Rerun previous batch" :
         config = load_config_file() # .pkl file
         config['rerun']=1
-        config = ask_apply_output_filtering(config)
         config = select_input_file_paths(config, settings) # read from pkl
         config = set_batch_related_names(config) # batch_prefix batch_name batch_output_subdirectory config_file logfile
         config = select_output_directory(config)
         config = ask_epoch_selection(config) # function will check if epoch_selection has already been made, if not then it will ask
         config = ask_average_ref(config)
+        config = ask_downsample_factor(config,settings)
+        config = ask_apply_output_filtering(config)
         config = ask_ica_option(config)
         config = ask_beamformer_option(config)
-        config = ask_downsample_factor(config,settings)
         msg = 'Loaded config: '
         window['-RUN_INFO-'].update(msg+'\n', append=True)
         print_dict(config)
@@ -963,12 +1031,12 @@ while True:# @noloop remove
         print('Enter parameters for this batch')
         config = create_dict()  # before file loop
         config['rerun'] = 0
-        config = ask_apply_output_filtering(config)
         config = select_input_file_paths(config, settings) # gui file explorer
         config = select_output_directory(config) # gui file explorer
         config = set_batch_related_names(config) # batch_prefix batch_name batch_output_subdirectory config_file logfile
         config = ask_average_ref(config)
         config = ask_epoch_selection(config)
+        config = ask_apply_output_filtering(config)
         config = ask_ica_option(config)
         config = ask_beamformer_option(config)  # before file loop
         # list of patterns read from eeg_processing_config_XX
@@ -981,7 +1049,6 @@ while True:# @noloop remove
             sample_frequency = config['sample_frequency']  # check
 
         config = ask_downsample_factor(config,settings)
-
         
         msg = 'Created config: '
         window['-RUN_INFO-'].update(msg+'\n', append=True)
@@ -1028,7 +1095,7 @@ while True:# @noloop remove
                 window['-FILE_INFO-'].update(msg+'\n', append=True)
                 
                 # create_raw(file_path
-                raw,config = create_raw(config,montage)   
+                raw,config = create_raw(config,montage,no_montage_patterns)   
                     
                 # update_channels_to_be_dropped
                 if config['rerun'] == 0 and config['channels_to_be_dropped_selected'] == 0:
@@ -1041,8 +1108,8 @@ while True:# @noloop remove
 
                 plot_power_spectrum(raw_temp, filtered=False)
 
-                raw_temp.filter(l_freq=0.5, h_freq=45, l_trans_bandwidth=0.25, \
-                                h_trans_bandwidth=4, picks='eeg')
+                raw_temp.filter(l_freq=0.5, h_freq=45, l_trans_bandwidth=0.5, \
+                                h_trans_bandwidth=3, picks='eeg')
                 
                 # To ensure bad channels are reloaded during a rerun:
                 if config['rerun'] == 1:
@@ -1072,7 +1139,8 @@ while True:# @noloop remove
                 
                 raw_temp,temporary_sample_f = perform_temp_down_sampling(raw_temp,config)
                 
-                plot_power_spectrum(raw_temp, filtered=True)
+                if config['apply_epoch_selection']:
+                    plot_power_spectrum(raw_temp, filtered=True)
 
                 raw_temp = perform_average_reference(raw_temp)
 
@@ -1083,9 +1151,9 @@ while True:# @noloop remove
                 raw = apply_bad_channels(raw,config)
 
                 if config['apply_ica'] or config['apply_beamformer']:
-                    raw.filter(l_freq=0.5, h_freq=45, l_trans_bandwidth=0.25,
+                    raw.filter(l_freq=0.5, h_freq=45, l_trans_bandwidth=0.5,
                                h_trans_bandwidth=4, picks='eeg')
-                    msg = "Output signal filtered to 0.5-45 Hz (transition bands 0.25 Hz and 4 Hz resp. \
+                    msg = "Output signal filtered to 0.5-45 Hz (transition bands 0.5 Hz and 4 Hz resp. \
                         Necessary for ICA and/or Beamforming"
                     window['-RUN_INFO-'].update(msg+'\n', append=True)
 
@@ -1131,38 +1199,91 @@ while True:# @noloop remove
                     len2 = len(selected_epochs_sensor)
                     progress_bar_epochs.UpdateBar(0, len2)
 
-                    save_epoch_data_to_txt(selected_epochs_sensor, config['file_path_sensor'], None)
+                    save_epoch_data_to_txt(selected_epochs_sensor, config['file_path_sensor'])
+                    
+                    if config['apply_output_filtering']:
+                        
+                        frequency_band_pairs = list(zip(config['frequency_bands'][::2], config['frequency_bands'][1::2]))
 
+                        for low_band, high_band in frequency_band_pairs:
+                            selected_epochs_sensor_filt = apply_epoch_selection(
+                                raw,config,sfreq=config['downsampled_sample_frequency'],
+                                filtering=True,
+                                l_freq=config['cut_off_frequency', low_band],
+                                h_freq=config['cut_off_frequency', high_band]
+                            )
+                            
+                            save_epoch_data_to_txt(
+                                selected_epochs_sensor_filt, config['file_path_sensor'],
+                                filtering=True,
+                                l_freq=config['cut_off_frequency',low_band],
+                                h_freq=config['cut_off_frequency', high_band]
+                            )
+                            
                     if config['apply_beamformer']:
                         # Export beamformed epochs
                         selected_epochs_source = apply_epoch_selection(raw_source, config, config['downsampled_sample_frequency'])
-                        save_epoch_data_to_txt(selected_epochs_source, config['file_path_source'], dict(
-                            eeg=1, mag=1e15, grad=1e13))
+                        save_epoch_data_to_txt(selected_epochs_source, config['file_path_source'],scalings=dict(
+                            eeg=10, mag=1e15, grad=1e13))
+                        
+                        if config['apply_output_filtering']:
+                            
+                            #frequency_band_pairs = list(zip(config['frequency_bands'][::2], config['frequency_bands'][1::2]))
 
-                else:# equals no epoch_output
+                            for low_band, high_band in frequency_band_pairs:
+                                selected_epochs_source_filt = apply_epoch_selection(
+                                    raw_source,config,sfreq=config['downsampled_sample_frequency'],
+                                    filtering=True,
+                                    l_freq=config['cut_off_frequency', low_band],
+                                    h_freq=config['cut_off_frequency', high_band]
+                                )
+                                
+                                save_epoch_data_to_txt(
+                                    selected_epochs_source_filt, config['file_path_source'],
+                                    scalings=dict(eeg=10, mag=1e15, grad=1e13),
+                                    filtering=True,
+                                    l_freq=config['cut_off_frequency',low_band],
+                                    h_freq=config['cut_off_frequency', high_band]
+                                )
+
+                else: # equals no epoch_output
                     msg = "No epoch selection performed"
                     window['-RUN_INFO-'].update(msg+'\n', append=True)
-
-                    raw_df = raw.to_data_frame(picks='eeg')
-                    raw_df = raw_df.iloc[:, 1:]  # Drop first (time) column
-                    raw_df = np.round(raw_df, decimals=settings['output_txt_decimals'])
-
-                    file_name_sensor = os.path.basename(
-                        root) + "_Sensor_level.txt"
-
-                    # Save the DataFrame to a text file
-                    raw_df.to_csv(config['file_path_sensor'], sep='\t', index=False)
-                    progress_bar_epochs.UpdateBar(1, 1) # epochs
-
+                    
+                    save_whole_EEG_to_txt(raw,config,config['file_path_sensor'])
+                    progress_bar_epochs.UpdateBar(1, 1)
+                    
+                    if config['apply_output_filtering']:
+                        frequency_band_pairs = list(zip(config['frequency_bands'][::2], config['frequency_bands'][1::2]))
+                        
+                        for low_band, high_band in frequency_band_pairs:
+                            raw_filt = filter_output_raw(raw,config,
+                                l_freq=config['cut_off_frequency', low_band],h_freq=config['cut_off_frequency', high_band])
+                            save_whole_EEG_to_txt(
+                                raw_filt,config,config['file_path_sensor'],
+                                filtering=True,
+                                l_freq=config['cut_off_frequency', low_band],
+                                h_freq=config['cut_off_frequency', high_band]
+                            )
+                            
                     if config['apply_beamformer']:
-                        # @@@ output file aanpassen
-                        raw_source_df = raw_source.to_data_frame(
-                            picks='eeg', scalings=dict(eeg=1, mag=1e15, grad=1e13))
-                        raw_source_df = raw_source_df.iloc[:, 1:]
-                        raw_source_df = np.round(raw_source_df, decimals=settings['output_txt_decimals'])
-                        file_name_source = os.path.basename(
-                            root) + "_Source_level.txt"
-                        raw_source_df.to_csv(config['file_path_source'], sep='\t', index=False)
+                        save_whole_EEG_to_txt(raw_source,config,config['file_path_source'],
+                            scalings=dict(eeg=10, mag=1e15, grad=1e13)
+                        )
+
+                        if config['apply_output_filtering']:
+                            frequency_band_pairs = list(zip(config['frequency_bands'][::2], config['frequency_bands'][1::2]))
+        
+                            for low_band, high_band in frequency_band_pairs:
+                                raw_source_filt = filter_output_raw(raw_source,config,
+                                    l_freq=config['cut_off_frequency', low_band],h_freq=config['cut_off_frequency', high_band])
+                                save_whole_EEG_to_txt(
+                                    raw_source_filt,config,config['file_path_source'],
+                                    scalings=dict(eeg=10, mag=1e15, grad=1e13),
+                                    filtering=True,
+                                    l_freq=config['cut_off_frequency', low_band],
+                                    h_freq=config['cut_off_frequency', high_band]
+                                )
 
                 filenum = filenum+1
                 progress_bar_files.UpdateBar(filenum, lfl) # files
