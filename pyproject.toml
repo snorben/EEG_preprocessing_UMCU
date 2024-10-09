@@ -8,28 +8,40 @@ requires = ["setuptools>=64.0.0", "setuptools-scm", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
+# see documentation, e.g.
+# - https://packaging.python.org/en/latest/specifications/declaring-project-metadata/#declaring-project-metadata
+# - https://setuptools.pypa.io/en/latest/userguide/pyproject_config.html
+# - https://www.python.org/dev/peps/pep-0621/
+
+[build-system]
+requires = ["setuptools>=64.0.0", "setuptools-scm", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
 authors = [
-    { name = "Yorben Lodema", email = "d.y.lodema-2@umcutrecht.nl" }
+    {name = "Herman van Dellen", email = "h.vandellen@umcutrecht.nl"},
+    {name = "Yorben Lodema", email = "d.y.lodema-2@umcutrecht.nl"}
 ]
+requires-python = ">=3.8"
 classifiers = [
-    "Development Status :: 2 - Pre-Alpha",
-    "Intended Audience :: Developers",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: Apache Software License",
-    "Natural Language :: English",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
 ]
-dependencies = []
-description = "eeg preprocessing"
-keywords = [
-    "eeg",
-    "preprocessing",
+dependencies = [
+    "PySimpleGUI",
+    "pandas",
+    "mne",
+    "numpy",
+    "matplotlib",  # Required for MNE plotting functions
 ]
+description = "eeg preprocessing software"
+keywords = ["eeg", "preprocessing", "neuroscience", "medical"]
 license = {file = "LICENSE"}
 name = "eeg_preprocessing_umcu"
 readme = {file = "README.md", content-type = "text/markdown"}
@@ -38,18 +50,8 @@ version = "0.1.0"
 
 [project.optional-dependencies]
 dev = [
-    "build",  # build is not only used in publishing (below), but also in the template's test suite
-    "bump-my-version",
-    "coverage [toml]",
-    "pytest",
-    "pytest-cov",
-    "ruff",
-    "sphinx",
-    "sphinx_rtd_theme",
-    "sphinx-autoapi",
-    "tox",
-    "myst_parser",
 ]
+
 publishing = [
     "build",
     "twine",
@@ -149,30 +151,3 @@ exclude = [
     "scripts",
 ]
 per-file-ignores = {}
-
-
-# Allow unused variables when underscore-prefixed.
-dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
-
-target-version = "py39"
-line-length = 120
-
-[tool.ruff.isort]
-known-first-party = ["eeg_preprocessing_umcu"]
-force-single-line = true
-no-lines-before = ["future","standard-library","third-party","first-party","local-folder"]
-
-[tool.bumpversion]
-current_version = "0.1.0"
-
-[[tool.bumpversion.files]]
-filename = "src/eeg_preprocessing_umcu/__init__.py"
-
-[[tool.bumpversion.files]]
-filename = "pyproject.toml"
-
-[[tool.bumpversion.files]]
-filename = "CITATION.cff"
-
-[[tool.bumpversion.files]]
-filename = "docs/conf.py"
