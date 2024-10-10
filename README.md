@@ -65,79 +65,50 @@ Install the package and its dependencies using pip:
 python -m pip install .
 ```
 
-This command will automatically install all the required dependencies listed in the `pyproject.toml` file.
-
 ### 5. Verify Installation
 
-To verify that the installation was successful, you can try running the main script (replace `main_script.py` with the actual name of your main script):
-
-```bash
-python src/eeg_preprocessing_umcu/main_script.py
-```
-
-If everything is set up correctly, the script should run without any import errors.
-
-### Alternative Installation Method
-
-As an alternative, you can use the following `environment.yml` file to create a conda environment with all necessary dependencies:
-
-```yaml
-name: eeg_env
-channels:
-  - defaults
-  - conda-forge
-dependencies:
-  - python=3.8
-  - numpy
-  - pandas
-  - matplotlib
-  - scikit-learn
-  - pip
-  - pip:
-    - PySimpleGUI
-    - mne
-```
-
-Save this as `environment.yml` in your project directory, then run:
-
-```bash
-conda env create -f environment.yml
-conda activate eeg_env
-python -m pip install .
-```
+To verify that the installation was successful, you can try running the main script (eeg_processing_script.py) in your favorite way (we have used Spyder to run the script during development). When opening the script in an IDE like Spyder, you can simply press 'run' to start the script. If everything is set up correctly, the script should run without any import errors.
 
 ## Updating the Software
 
 When there's an update available on GitHub, follow these steps to update your local installation:
 1. Navigate to the Project Directory
 Open a terminal (or Anaconda Prompt on Windows) and navigate to your project directory:
-bashCopycd path/to/eeg_preprocessing_umcu
-2. Activate the Conda Environment
+```bash
+cd path/to/eeg_preprocessing_umcu
+```
+3. Activate the Conda Environment
 Ensure you're using the correct environment:
-bashCopyconda activate eeg_env
-3. Pull the Latest Changes
+```bash
+conda activate eeg_env
+```
+5. Pull the Latest Changes
 Fetch and merge the latest changes from the GitHub repository:
-bashCopygit pull origin main
-Note: Replace main with the appropriate branch name if you're not using the main branch.
-4. Update Dependencies
+```bash
+git pull origin main
+```
+7. Update Dependencies
 If there are any changes to the dependencies, reinstall the package:
-bashCopypython -m pip install . --upgrade
+```bash
+python -m pip install . --upgrade
+```
 This command will update the package and any new or updated dependencies.
-5. Verify the Update
-Run your main script to ensure everything is working correctly after the update:
-bashCopypython src/eeg_preprocessing_umcu/main_script.py
-Troubleshooting Updates
+
 If you encounter issues after updating:
 
 Ensure your conda environment is up to date:
-bashCopyconda update --all
+```bash
+conda update --all
+```
 
 If you're still having problems, you can try creating a fresh environment:
-bashCopyconda deactivate
+```bash
+conda deactivate
 conda remove --name eeg_env --all
 conda create -n eeg_env python=3.8
 conda activate eeg_env
 python -m pip install .
+```
 
 ### Troubleshooting
 
