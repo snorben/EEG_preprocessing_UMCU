@@ -69,6 +69,20 @@ python -m pip install .
 
 To verify that the installation was successful, you can try running the main script (eeg_processing_script.py) in your favorite way (we have used Spyder to run the script during development). When opening the script in an IDE like Spyder, you can simply press 'run' to start the script. If everything is set up correctly, the script should run without any import errors.
 
+## Troubleshooting
+
+If you encounter any issues during installation:
+
+1. Make sure you have activated the conda environment (`conda activate eeg_env`).
+2. Try updating pip: `python -m pip install --upgrade pip`
+3. If you encounter any dependency conflicts, you can try installing dependencies manually:
+   ```bash
+   conda install numpy pandas matplotlib scikit-learn
+   pip install PySimpleGUI mne
+   ```
+
+For any further issues, please open an issue on the [GitHub repository](https://github.com/snorben/eeg_preprocessing_umcu/issues).
+
 ## Updating the Software
 
 When there's an update available on GitHub, follow these steps to update your local installation:
@@ -109,20 +123,6 @@ conda create -n eeg_env python=3.8
 conda activate eeg_env
 python -m pip install .
 ```
-
-## Troubleshooting
-
-If you encounter any issues during installation:
-
-1. Make sure you have activated the conda environment (`conda activate eeg_env`).
-2. Try updating pip: `python -m pip install --upgrade pip`
-3. If you encounter any dependency conflicts, you can try installing dependencies manually:
-   ```bash
-   conda install numpy pandas matplotlib scikit-learn
-   pip install PySimpleGUI mne
-   ```
-
-For any further issues, please open an issue on the [GitHub repository](https://github.com/snorben/eeg_preprocessing_umcu/issues).
 
 ## Contributing
 
