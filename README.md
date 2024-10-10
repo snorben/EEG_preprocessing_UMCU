@@ -94,7 +94,7 @@ python -m pip install . --upgrade
 ```
 This command will update the package and any new or updated dependencies.
 
-If you encounter issues after updating:
+### If you encounter issues after updating:
 
 Ensure your conda environment is up to date:
 ```bash
@@ -110,7 +110,7 @@ conda activate eeg_env
 python -m pip install .
 ```
 
-### Troubleshooting
+## Troubleshooting
 
 If you encounter any issues during installation:
 
