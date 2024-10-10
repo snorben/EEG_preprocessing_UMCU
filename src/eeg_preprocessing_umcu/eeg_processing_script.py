@@ -126,9 +126,8 @@ def ask_apply_output_filtering(config):
         if event == 'Yes':
             config['apply_output_filtering'] = 1
             config = ask_update_frequency_bands(config)
-            print_dict(config) # check
             break
-        if event in (sg.WIN_CLOSED, 'Ok'):
+        if event in (sg.WIN_CLOSED, 'No'):
             break
     window.close()
     return config
@@ -144,11 +143,9 @@ def ask_update_frequency_bands(config):
     while True:
         event, values = window.read()
         if event == 'Yes':
-            print_dict(config) # check
             config = update_frequency_bands(config)
-            print_dict(config) # check
             break
-        if event in (sg.WIN_CLOSED, 'Ok'):
+        if event in (sg.WIN_CLOSED, 'No'):
             break
     window.close()
     return config
@@ -165,10 +162,10 @@ def update_frequency_bands(config):
          sg.Text('theta_high    '), sg.Input(default_text= config['cut_off_frequency','theta_high'], key='-FILTER_TH-',size=f_size)],
         [sg.Text('alpha_low     '), sg.Input(default_text= config['cut_off_frequency','alpha_low'], key='-FILTER_AL-',size=f_size),
          sg.Text('alpha_high    '), sg.Input(default_text= config['cut_off_frequency','alpha_high'], key='-FILTER_AH-',size=f_size)],
-        [sg.Text('beta1_low      '), sg.Input(default_text= config['cut_off_frequency','beta1_low'], key='-FILTER_B1L-',size=f_size),
-         sg.Text('beta1_high     '), sg.Input(default_text= config['cut_off_frequency','beta1_high'], key='-FILTER_B1H-',size=f_size)],
-        [sg.Text('beta2_low      '), sg.Input(default_text= config['cut_off_frequency','beta2_low'], key='-FILTER_B2L-',size=f_size),
-         sg.Text('beta2_high     '), sg.Input(default_text= config['cut_off_frequency','beta2_high'], key='-FILTER_B2H-',size=f_size)],
+        [sg.Text('beta1_low     '), sg.Input(default_text= config['cut_off_frequency','beta1_low'], key='-FILTER_B1L-',size=f_size),
+         sg.Text('beta1_high    '), sg.Input(default_text= config['cut_off_frequency','beta1_high'], key='-FILTER_B1H-',size=f_size)],
+        [sg.Text('beta2_low     '), sg.Input(default_text= config['cut_off_frequency','beta2_low'], key='-FILTER_B2L-',size=f_size),
+         sg.Text('beta2_high    '), sg.Input(default_text= config['cut_off_frequency','beta2_high'], key='-FILTER_B2H-',size=f_size)],
         [sg.Text('broadband_low '), sg.Input(default_text= config['cut_off_frequency','broadband_low'], key='-FILTER_BRL-',size=f_size),
          sg.Text('broadband_high'), sg.Input(default_text= config['cut_off_frequency','broadband_high'], key='-FILTER_BRH-',size=f_size)],
         [sg.Button('Select',font=font)]
@@ -352,18 +349,14 @@ def ask_input_file_pattern(config, settings):
         event, values = window.read()
         if event == 'Ok':
             try:
-                selection = values["_LISTBOX_"]
-                selection = selection[0]
-                # print(selection)
-                # check if valid selection was made, else raise exception
-                index = settings['input_file_patterns'].index(selection)
-                config['input_file_pattern'] = selection
-                break
-            except:
+                if values['_LISTBOX_']:
+                    selection = values["_LISTBOX_"]
+                    selection = selection[0]
+                    config['input_file_pattern'] = selection
+                    break
+            except: # remove?
                 sg.popup_error('No valid selection', location=(100, 100),font=font)
                 window.close()
-        if event in (sg.WIN_CLOSED, 'Ok'):
-            break
     window.close()
     
     return config
@@ -443,24 +436,24 @@ def ask_sample_frequency(config,settings):
     layout = [
         [sg.Text("Select sample frequency", tooltip=tooltip)],
         [sg.Listbox(values=settings['sample_frequencies'], size=(15, None), enable_events=True, bind_return_key=True,
-                    select_mode='single', key='_LISTBOX_', background_color='white')],
+                    select_mode='single', key='_LISTBOX_F_', background_color='white')],
         [sg.Button('Ok', bind_return_key=True,)]
     ]
     window = sg.Window("EEG processing input parameters", layout, modal=True,
                        use_custom_titlebar=True, font=font, location=(100, 100))
     while True:
         event, values = window.read()
+        
         if event == 'Ok':
             try:
-                selection = values["_LISTBOX_"]
-                selection = selection[0]
-                config['sample_frequency'] = selection
-                break
-            except:
+                if values['_LISTBOX_F_']:
+                    selection = values["_LISTBOX_F_"]
+                    selection = selection[0]
+                    config['sample_frequency'] = selection
+                    break
+            except: # remove?
                 sg.popup_error('No valid selection',font=font)
                 window.close()
-        if event in (sg.WIN_CLOSED, 'Ok'):
-            break
     window.close()
     return config
 
