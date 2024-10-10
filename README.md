@@ -24,17 +24,134 @@ The software is not (yet) able to:
 
 ## Installation
 
-To install eeg_preprocessing_umcu from GitHub repository, do:
+This guide will walk you through the process of setting up the EEG Preprocessing Tool using Miniconda. Miniconda provides an easy way to create isolated Python environments and manage package dependencies.
 
-```console
-git clone git@github.com:snorben/eeg_preprocessing_umcu.git
+### 1. Install Miniconda
+
+First, download and install Miniconda:
+
+- For Windows: [Miniconda Windows Installer](https://docs.conda.io/en/latest/miniconda.html#windows-installers)
+- For macOS: [Miniconda macOS Installer](https://docs.conda.io/en/latest/miniconda.html#macos-installers)
+- For Linux: [Miniconda Linux Installer](https://docs.conda.io/en/latest/miniconda.html#linux-installers)
+
+Follow the installation instructions provided on the Miniconda website.
+
+### 2. Set up a Conda Environment
+
+Open a terminal (or Anaconda Prompt on Windows) and run the following commands:
+
+```bash
+# Create a new conda environment named 'eeg_env' with Python 3.8
+conda create -n eeg_env python=3.8
+
+# Activate the new environment
+conda activate eeg_env
+```
+
+### 3. Clone the Repository
+
+Clone the EEG Preprocessing Tool repository:
+
+```bash
+git clone https://github.com/snorben/eeg_preprocessing_umcu.git
 cd eeg_preprocessing_umcu
+```
+
+### 4. Install the Package and Dependencies
+
+Install the package and its dependencies using pip:
+
+```bash
 python -m pip install .
 ```
 
-## Documentation
+This command will automatically install all the required dependencies listed in the `pyproject.toml` file.
 
-Include a link to your project's full documentation here.
+### 5. Verify Installation
+
+To verify that the installation was successful, you can try running the main script (replace `main_script.py` with the actual name of your main script):
+
+```bash
+python src/eeg_preprocessing_umcu/main_script.py
+```
+
+If everything is set up correctly, the script should run without any import errors.
+
+### Alternative Installation Method
+
+As an alternative, you can use the following `environment.yml` file to create a conda environment with all necessary dependencies:
+
+```yaml
+name: eeg_env
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.8
+  - numpy
+  - pandas
+  - matplotlib
+  - scikit-learn
+  - pip
+  - pip:
+    - PySimpleGUI
+    - mne
+```
+
+Save this as `environment.yml` in your project directory, then run:
+
+```bash
+conda env create -f environment.yml
+conda activate eeg_env
+python -m pip install .
+```
+
+## Updating the Software
+
+When there's an update available on GitHub, follow these steps to update your local installation:
+1. Navigate to the Project Directory
+Open a terminal (or Anaconda Prompt on Windows) and navigate to your project directory:
+bashCopycd path/to/eeg_preprocessing_umcu
+2. Activate the Conda Environment
+Ensure you're using the correct environment:
+bashCopyconda activate eeg_env
+3. Pull the Latest Changes
+Fetch and merge the latest changes from the GitHub repository:
+bashCopygit pull origin main
+Note: Replace main with the appropriate branch name if you're not using the main branch.
+4. Update Dependencies
+If there are any changes to the dependencies, reinstall the package:
+bashCopypython -m pip install . --upgrade
+This command will update the package and any new or updated dependencies.
+5. Verify the Update
+Run your main script to ensure everything is working correctly after the update:
+bashCopypython src/eeg_preprocessing_umcu/main_script.py
+Troubleshooting Updates
+If you encounter issues after updating:
+
+Ensure your conda environment is up to date:
+bashCopyconda update --all
+
+If you're still having problems, you can try creating a fresh environment:
+bashCopyconda deactivate
+conda remove --name eeg_env --all
+conda create -n eeg_env python=3.8
+conda activate eeg_env
+python -m pip install .
+
+### Troubleshooting
+
+If you encounter any issues during installation:
+
+1. Make sure you have activated the conda environment (`conda activate eeg_env`).
+2. Try updating pip: `python -m pip install --upgrade pip`
+3. If you encounter any dependency conflicts, you can try installing dependencies manually:
+   ```bash
+   conda install numpy pandas matplotlib scikit-learn
+   pip install PySimpleGUI mne
+   ```
+
+For any further issues, please open an issue on the [GitHub repository](https://github.com/snorben/eeg_preprocessing_umcu/issues).
 
 ## Contributing
 
