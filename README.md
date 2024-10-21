@@ -41,8 +41,8 @@ Follow the installation instructions provided on the Miniconda website.
 Open a terminal (or Anaconda Prompt on Windows) and run the following commands:
 
 ```bash
-# Create a new conda environment named 'eeg_env' with Python 3.8
-conda create -n eeg_env python=3.8
+# Create a new conda environment named 'eeg_env' with Python 3.11
+conda create -n eeg_env python=3.11
 
 # Activate the new environment
 conda activate eeg_env
