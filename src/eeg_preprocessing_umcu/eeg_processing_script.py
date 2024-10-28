@@ -41,11 +41,11 @@ progress_value1 = 20
 progress_value2 = 20
 
 layout = [
-    [sg.Text('EEG Preprocessing', size=(30, 1), font=("Ubuntu Medium", 35), text_color='#003DA6',
-             justification='c'), sg.Text(EEG_version)],
+    # [sg.Text('EEG Preprocessing', size=(30, 1), font=("Ubuntu Medium", 35), text_color='#003DA6',
+    #          justification='c'), sg.Text(EEG_version)],
     [sg.Multiline('File info:\n', autoscroll=True, size=(
         120, 10), k='-FILE_INFO-', reroute_stdout=True)],  # True=redirect console to window @@@
-    [sg.Text('Functions: '), sg.Button(
+    [sg.Button(
         'Enter parameters for this batch'), sg.Button('Rerun previous batch'),sg.Button('Start processing')],
     [sg.Multiline('Run info:\n', autoscroll=True,
                   size=(120, 10), k='-RUN_INFO-', reroute_stdout=True)],  # True=redirect console to window @@@
@@ -54,7 +54,8 @@ layout = [
     [sg.ProgressBar(progress_value2, orientation='h', size=(
         120, 10), key='progressbar_epochs', bar_color=['#003DA6', 'grey'])],
     [sg.Button('Exit')],
-    [sg.Column([[my_image]], justification='center')]]
+    # [sg.Column([[my_image]], justification='center')]]
+    [sg.Column([[my_image]], justification='right', pad=(0,0))]]
 
 def print_dict(dict):# pprint and json.print do not work well with composite keys!
     '''     Function to print dictionary.     '''
@@ -991,8 +992,8 @@ def save_whole_EEG_to_txt(raw_output,config,base,scalings=None,filtering=False,l
 
 ##################################################################################
 
-window = sg.Window('UMC Utrecht MNE EEG Preprocessing', layout, location=(
-    30, 30), size=(1000, 700), finalize=True, font=font)
+window = sg.Window('MNE-python based EEG Preprocessing', layout, location=(
+    30, 30), size=(1000, 550), finalize=True, font=font)
 
 progress_bar_files = window.find_element('progressbar_files')
 progress_bar_epochs = window.find_element('progressbar_epochs')
@@ -1157,7 +1158,6 @@ while True:# @noloop remove
                     msg = "Ica applied to output signal"
                     window['-RUN_INFO-'].update(msg+'\n', append=True)
 
-                if config['apply_average_ref']:
                     raw = perform_average_reference(raw)
                     msg = "Average reference set on output signal"
                 else:
