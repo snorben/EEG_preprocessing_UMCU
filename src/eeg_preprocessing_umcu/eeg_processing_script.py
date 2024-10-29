@@ -40,22 +40,34 @@ EEG_version = "v4.0"
 progress_value1 = 20
 progress_value2 = 20
 
+button_color = ('#FFFFFF', '#2196F3')  # White text on blue button
+exit_button_color = ('#FFFFFF', 'indianred')  # White text on red button
+button_style = {
+    'border_width': 0,
+    'button_color': button_color,
+    'pad': (10, 5),
+    'mouseover_colors': ('#FFFFFF', '#1976D2'),  # Slightly darker blue on hover
+}
+
 layout = [
-    # [sg.Text('EEG Preprocessing', size=(30, 1), font=("Ubuntu Medium", 35), text_color='#003DA6',
-    #          justification='c'), sg.Text(EEG_version)],
-    [sg.Multiline('File info:\n', autoscroll=True, size=(
-        120, 10), k='-FILE_INFO-', reroute_stdout=True)],  # True=redirect console to window @@@
-    [sg.Button(
-        'Enter parameters for this batch'), sg.Button('Rerun previous batch'),sg.Button('Start processing')],
-    [sg.Multiline('Run info:\n', autoscroll=True,
-                  size=(120, 10), k='-RUN_INFO-', reroute_stdout=True)],  # True=redirect console to window @@@
-    [sg.ProgressBar(progress_value1, orientation='h', size=(
-        120, 10), key='progressbar_files', bar_color=['red', 'grey'])],
-    [sg.ProgressBar(progress_value2, orientation='h', size=(
-        120, 10), key='progressbar_epochs', bar_color=['#003DA6', 'grey'])],
-    [sg.Button('Exit')],
-    # [sg.Column([[my_image]], justification='center')]]
-    [sg.Column([[my_image]], justification='right', pad=(0,0))]]
+    [sg.Text('',font=('Default', 3), background_color="#E6F3FF")], 
+    [sg.Button('Choose settings for this batch', **button_style), 
+     sg.Button('Rerun previous batch', **button_style), sg.Button('Start processing', **button_style)],
+    [sg.Text('',font=('Default', 3), background_color="#E6F3FF")], 
+    [sg.Text('File info', font=('Default', 14, 'bold'), background_color="#E6F3FF")],
+    [sg.Multiline('', autoscroll=True, size=(120, 12), k='-FILE_INFO-', reroute_stdout=True)],
+    [sg.Text('Run info', font=('Default', 14, 'bold'), background_color="#E6F3FF")],
+    [sg.Multiline('', autoscroll=True, size=(120, 12), k='-RUN_INFO-', reroute_stdout=True)],
+    [sg.ProgressBar(progress_value1, orientation='h', size=(110, 10), 
+                   key='progressbar_files', bar_color=['red', 'lightgrey'])],
+    [sg.ProgressBar(progress_value2, orientation='h', size=(110, 10), 
+                   key='progressbar_epochs', bar_color=['#003DA6', 'lightgrey'])],
+    [sg.Text('',font=('Default', 3))], 
+    [sg.Button('Exit', button_color=exit_button_color, 
+               border_width=0, pad=(10, 5), mouseover_colors=('#FFFFFF', 'firebrick'))],
+    [sg.Text('Yorben Lodema \nHerman van Dellen',font=('Default', 12), background_color="#E6F3FF")], 
+    [sg.Column([[my_image]], justification='right')]
+]
 
 def print_dict(dict):# pprint and json.print do not work well with composite keys!
     '''     Function to print dictionary.     '''
@@ -65,7 +77,6 @@ def print_dict(dict):# pprint and json.print do not work well with composite key
 def write_config_file(config):
     '''     Function to write config file in .pkl format.     '''
     fn = config['config_file']
-    # first remove raw data (legacy)
     config.pop('raw', None) # remove from dict if exists
     config.pop('raw_temp', None) # remove from dict if exists
     config.pop('raw_temp_filtered', None) # remove from dict if exists
@@ -97,10 +108,8 @@ def select_input_file_paths(config, settings):
         config['input_file_paths'] = file_list  
     return config
 
-
 def load_config_file():
     '''     Function to select and read a previously saved config file in .pkl format.     '''
-    # file_types=(('.pkl files','*.pkl'),) => from rerun
     txt=settings['load_config_file','text']
     config_file=sg.popup_get_file(txt,file_types=(('.pkl files','*.pkl'),),no_window=False,background_color='white', 
                                font=font,location=(100, 100))
@@ -114,16 +123,19 @@ def load_config_file():
     return config
 
 def ask_apply_output_filtering(config):
-    
     '''     Function to ask if user wants to filter output.     '''
-    txt = "Do you want to apply output filtering?"  # @@@
-    tooltip = """Do you want to apply output filtering?"""
-    layout = [[sg.Text(txt, tooltip=tooltip, enable_events=True)],
-              [sg.Button('Yes'), sg.Button('No')]]
-    window = sg.Window("EEG processing input parameters", layout,  font=font,modal=True, use_custom_titlebar=True, 
-                       background_color='white', location=(100, 100))
+    txt = "Do you want to also save filtered output?"
+    url = "https://mne.tools/stable/auto_tutorials/preprocessing/25_background_filtering.html"
+    layout = [[sg.Text(txt, enable_events=True, background_color='white')],
+              [sg.Button('Yes'), sg.Button('No')], [sg.Push(background_color='white'), sg.Button('More info')]]
+    window = sg.Window("EEG processing input parameters", layout, modal=True, 
+                      use_custom_titlebar=True, font=font, 
+                      background_color='white', location=(100, 100))
     while True:
         event, values = window.read()
+        if event == 'More info':
+            wb.open_new_tab(url)
+            continue
         if event == 'Yes':
             config['apply_output_filtering'] = 1
             config = ask_update_frequency_bands(config)
@@ -135,10 +147,9 @@ def ask_apply_output_filtering(config):
 
 def ask_update_frequency_bands(config):
     '''     Function to ask if user wants to modify frequency bands.     '''
-    txt = "Do you want to modify frequency bands?"  # @@@
-    tooltip = """Do you want to modify frequency bands?"""
-    layout = [[sg.Text(txt, tooltip=tooltip, enable_events=True)],
-              [sg.Button('Yes'), sg.Button('No')]]
+    txt = "Do you want to modify the frequency bands used for filtering?"
+    layout = [[sg.Text(txt, enable_events=True, background_color='white')],
+              [sg.Button('Yes'), sg.Button('No')], [sg.Push(background_color='white')]]
     window = sg.Window("EEG processing input parameters", layout,  font=font,modal=True, use_custom_titlebar=True, 
                        background_color='white', location=(100, 100))
     while True:
@@ -156,19 +167,19 @@ def update_frequency_bands(config):
     tooltip=""
     layout = [
         [sg.Text(
-            "Frequency bands", tooltip=tooltip,font=font)],
-        [sg.Text('delta_low     '), sg.Input(default_text= config['cut_off_frequency','delta_low'], key='-FILTER_DL-',size=f_size),
-         sg.Text('delta_high    '), sg.Input(default_text= config['cut_off_frequency','delta_high'], key='-FILTER_DH-',size=f_size)],
-        [sg.Text('theta_low     '), sg.Input(default_text= config['cut_off_frequency','theta_low'], key='-FILTER_TL-',size=f_size),
-         sg.Text('theta_high    '), sg.Input(default_text= config['cut_off_frequency','theta_high'], key='-FILTER_TH-',size=f_size)],
-        [sg.Text('alpha_low     '), sg.Input(default_text= config['cut_off_frequency','alpha_low'], key='-FILTER_AL-',size=f_size),
-         sg.Text('alpha_high    '), sg.Input(default_text= config['cut_off_frequency','alpha_high'], key='-FILTER_AH-',size=f_size)],
-        [sg.Text('beta1_low     '), sg.Input(default_text= config['cut_off_frequency','beta1_low'], key='-FILTER_B1L-',size=f_size),
-         sg.Text('beta1_high    '), sg.Input(default_text= config['cut_off_frequency','beta1_high'], key='-FILTER_B1H-',size=f_size)],
-        [sg.Text('beta2_low     '), sg.Input(default_text= config['cut_off_frequency','beta2_low'], key='-FILTER_B2L-',size=f_size),
-         sg.Text('beta2_high    '), sg.Input(default_text= config['cut_off_frequency','beta2_high'], key='-FILTER_B2H-',size=f_size)],
-        [sg.Text('broadband_low '), sg.Input(default_text= config['cut_off_frequency','broadband_low'], key='-FILTER_BRL-',size=f_size),
-         sg.Text('broadband_high'), sg.Input(default_text= config['cut_off_frequency','broadband_high'], key='-FILTER_BRH-',size=f_size)],
+            "Frequency bands", tooltip=tooltip,font=font, background_color='white')],
+        [sg.Text('delta_low     ', background_color='white'), sg.Input(default_text= config['cut_off_frequency','delta_low'], key='-FILTER_DL-',size=f_size),
+         sg.Text('delta_high    ', background_color='white'), sg.Input(default_text= config['cut_off_frequency','delta_high'], key='-FILTER_DH-',size=f_size)],
+        [sg.Text('theta_low     ', background_color='white'), sg.Input(default_text= config['cut_off_frequency','theta_low'], key='-FILTER_TL-',size=f_size),
+         sg.Text('theta_high    ', background_color='white'), sg.Input(default_text= config['cut_off_frequency','theta_high'], key='-FILTER_TH-',size=f_size)],
+        [sg.Text('alpha_low     ', background_color='white'), sg.Input(default_text= config['cut_off_frequency','alpha_low'], key='-FILTER_AL-',size=f_size),
+         sg.Text('alpha_high    ', background_color='white'), sg.Input(default_text= config['cut_off_frequency','alpha_high'], key='-FILTER_AH-',size=f_size)],
+        [sg.Text('beta1_low     ', background_color='white'), sg.Input(default_text= config['cut_off_frequency','beta1_low'], key='-FILTER_B1L-',size=f_size),
+         sg.Text('beta1_high    ', background_color='white'), sg.Input(default_text= config['cut_off_frequency','beta1_high'], key='-FILTER_B1H-',size=f_size)],
+        [sg.Text('beta2_low     ', background_color='white'), sg.Input(default_text= config['cut_off_frequency','beta2_low'], key='-FILTER_B2L-',size=f_size),
+         sg.Text('beta2_high    ', background_color='white'), sg.Input(default_text= config['cut_off_frequency','beta2_high'], key='-FILTER_B2H-',size=f_size)],
+        [sg.Text('broadband_low ', background_color='white'), sg.Input(default_text= config['cut_off_frequency','broadband_low'], key='-FILTER_BRL-',size=f_size),
+         sg.Text('broadband_high', background_color='white'), sg.Input(default_text= config['cut_off_frequency','broadband_high'], key='-FILTER_BRH-',size=f_size)],
         [sg.Button('Select',font=font)]
     ]
     window = sg.Window("Filter", layout, modal=True, use_custom_titlebar=True, font=f_font, 
@@ -200,13 +211,12 @@ def update_frequency_bands(config):
     return config
 
 def select_output_directory(config):
-    '''     Function to set Output folder for exported epoch- and log files.     '''
+    '''     Function to set Output folder for exported EEG data and log files.     '''
     if not config['rerun']:
-        tooltip = 'Output folder for exported epoch- and log files'
         working_directory = os.getcwd()
         layout = [
             [sg.Text(
-                "Select base output directory to save epoch- and log files to\n(Subdirectories will be created for log, epochs etc.)", tooltip=tooltip)],
+                "Select base output directory to save EEG data and log files to\n(Subdirectories will be created for log, epochs etc.)", background_color='white')],
             [sg.InputText(default_text=working_directory, key="-FOLDER_PATH-"),
              sg.FolderBrowse(initial_folder=working_directory)],
             [sg.Button('Select')]
@@ -227,19 +237,17 @@ def select_output_directory(config):
         window.close()
     return config
 
-
 def ask_average_ref(config):
     '''     Function to ask if user wants to apply average reference to the raw EEG.     '''
     txt = "Do you want to apply average reference to the raw EEG?"
-    tooltip = """Do you want to apply average reference to the raw EEG?"""
     url = "https://mne.tools/stable/auto_tutorials/preprocessing/55_setting_eeg_reference.html"
-    layout = [[sg.Text(txt, tooltip=tooltip, enable_events=True)],
-              [sg.Button('Yes'), sg.Button('No')], [sg.Push(), sg.Button('More info...')]]
+    layout = [[sg.Text(txt, enable_events=True, background_color='white')],
+              [sg.Button('Yes'), sg.Button('No')], [sg.Push(background_color='white'), sg.Button('More info')]]
     window = sg.Window("EEG processing input parameters", layout, modal=True, use_custom_titlebar=True, 
                        font=font,background_color='white', location=(100, 100))
     while True:
         event, values = window.read()
-        if event == 'More info...':
+        if event == 'More info':
             wb.open_new_tab(url)
             continue
         if event == 'Yes':
@@ -253,17 +261,19 @@ def ask_average_ref(config):
     window.close()
     return config
 
-
 def ask_ica_option(config):
     '''     Function to ask if user wants to apply ICA.     '''
-    txt = "Do you want to apply ICA?\nNote:make sure to deselect electrodes with overlapping positions\ne.g. HR, ML, Nose"  # @@@
-    tooltip = """Do you want to apply ICA?"""
-    layout = [[sg.Text(txt, tooltip=tooltip, enable_events=True)],
-              [sg.Button('Yes'), sg.Button('No')]]
-    window = sg.Window("EEG processing input parameters", layout,  font=font,modal=True, use_custom_titlebar=True, 
+    txt = "Do you want to apply ICA?\nNote: make sure to deselect empty channels"
+    url = "https://mne.tools/stable/auto_tutorials/preprocessing/40_artifact_correction_ica.html"
+    layout = [[sg.Text(txt, enable_events=True, background_color='white')],
+              [sg.Button('Yes'), sg.Button('No')], [sg.Push(background_color='white'), sg.Button('More info')]]
+    window = sg.Window('EEG processing input parameters', layout,  font=font,modal=True, use_custom_titlebar=True, 
                        background_color='white', location=(100, 100))
     while True:
         event, values = window.read()
+        if event == 'More info':
+            wb.open_new_tab(url)
+            continue
         if event == 'Yes':
             config['apply_ica'] = 1
             config = ask_nr_ica_components(
@@ -278,17 +288,19 @@ def ask_ica_option(config):
     
     return config
 
-
 def ask_beamformer_option(config):
     '''     Function to ask if user wants to apply Beamforming.     '''
     txt = "Do you want to apply Beamforming?"
-    tooltip = """Do you want to apply Beamforming?"""
-    layout = [[sg.Text(txt, tooltip=tooltip, enable_events=True)],
-              [sg.Button('Yes'), sg.Button('No')]]
+    url = "https://mne.tools/stable/auto_tutorials/inverse/50_beamformer_lcmv.html"
+    layout = [[sg.Text(txt, enable_events=True, background_color='white')],
+              [sg.Button('Yes'), sg.Button('No')], [sg.Push(background_color='white'), sg.Button('More info')]]
     window = sg.Window("EEG processing input parameters", layout, modal=True, use_custom_titlebar=True, font=font, 
                        background_color='white', location=(100, 100))
     while True:
         event, values = window.read()
+        if event == 'More info':
+            wb.open_new_tab(url)
+            continue
         if event == 'Yes':
             config['apply_beamformer'] = 1
             config['apply_average_ref'] = 1  # prereq for beamformer
@@ -302,22 +314,18 @@ def ask_beamformer_option(config):
     
     return config
 
-
 def ask_epoch_selection(config):
     '''     Function to ask if user wants to apply apply_epoch_selection.     '''
     if config['rerun']==0 or (config['rerun']==1 and config['apply_epoch_selection']==0):
-        tooltip = """Do you want to apply epoch selection?
-        The alternative is to export uncut data"""
         txt = "Do you want to apply epoch selection?"
         url = "https://mne.tools/stable/generated/mne.Epochs.html#mne.Epochs.plot"
-        layout = [[sg.Text(txt, tooltip=tooltip, enable_events=True)],
-                  [sg.Button('Yes'), sg.Button('No')], [sg.Push(), sg.Button('More info...')]]
+        layout = [[sg.Text(txt, enable_events=True, background_color='white')],
+                  [sg.Button('Yes'), sg.Button('No')], [sg.Push(background_color='white'), sg.Button('More info')]]
         window = sg.Window("EEG processing input parameters", layout, modal=True, use_custom_titlebar=True, font=font, 
                            background_color='white', location=(100, 100))
         while True:
             event, values = window.read()
-            if event == 'More info...':
-                # os.system('cmd /c start chrome '+url) # force to use Chrome
+            if event == 'More info':
                 wb.open_new_tab(url)
                 continue
             if event == 'Yes':
@@ -333,19 +341,18 @@ def ask_epoch_selection(config):
         window.close()
     return config
 
-
 def ask_input_file_pattern(config, settings):
     '''     Function to ask input_file_patterns.     '''
-    # note:input_file_patterns read from eeg_processing_settings file
+    # note: input_file_patterns read from eeg_processing_settings file
     txt=settings['input_file_patterns','text']
     tooltip=settings['input_file_patterns','tooltip']
     layout = [
-        [sg.Text(txt, tooltip=tooltip)],
+        [sg.Text(txt, tooltip=tooltip, background_color='white')],
         [sg.Listbox(values=settings['input_file_patterns'], size=(15, None), enable_events=True, bind_return_key=True,
                     select_mode='single', key='_LISTBOX_', background_color='white')],
         [sg.Button('Ok', bind_return_key=True)]]
     window = sg.Window("EEG processing input parameters", layout, modal=True,
-                       use_custom_titlebar=True, font=font, location=(100, 100))
+                       use_custom_titlebar=True, font=font, location=(100, 100), background_color='white')
     while True:
         event, values = window.read()
         if event == 'Ok':
@@ -359,23 +366,19 @@ def ask_input_file_pattern(config, settings):
                 sg.popup_error('No valid selection', location=(100, 100),font=font)
                 window.close()
     window.close()
-    
     return config
-
 
 def select_channels_to_be_dropped(in_list):
     '''     Function to ask channels to be dropped.     '''
-    tooltip = "Select one or more channels to be dropped, or only press OK to drop none"
     items = in_list
-    txt = "Select channels to be dropped (if any)\nNote:for ICA make sure to drop empty or non-EEG channels"
+    txt = "Select channels to be dropped (if any)\nNote: for ICA make sure to drop empty or non-EEG channels."
     layout = [
-        [sg.Text(txt, tooltip=tooltip)],
-        [sg.Listbox(values=items, size=(15, 30), enable_events=True, bind_return_key=True,
+        [sg.Text(txt, background_color='white')], [sg.Listbox(values=items, size=(15, 30), enable_events=True, bind_return_key=True,
                     select_mode='multiple', key='_LISTBOX_', background_color='white')],
         [sg.Button('Ok', bind_return_key=True,)]
     ]
     window = sg.Window("EEG processing input parameters", layout, modal=True,
-                       use_custom_titlebar=True, font=font, location=(100, 100))
+                       use_custom_titlebar=True, font=font, location=(100, 100), background_color='white')
     while True:
         event, values = window.read()
         if event == 'Ok':
@@ -390,40 +393,11 @@ def select_channels_to_be_dropped(in_list):
     window.close()
     return out_list
 
-
-def select_components_to_be_dropped(max_comp):
-    '''     Function to ask components to be dropped.     '''
-    tooltip = "select one or more components to be dropped, just press OK if you don't want to"
-    txt = "Select components to be dropped (if any)"
-    items = list(range(0, max_comp))
-    layout = [
-        [sg.Text(txt, tooltip=tooltip)],
-        [sg.Listbox(values=items, size=(15, 30), enable_events=True, bind_return_key=True,
-                    select_mode='multiple', key='_LISTBOX_C_', background_color='white')],
-        [sg.Button('Ok', bind_return_key=True,)]
-    ]
-    window = sg.Window("EEG processing input parameters", layout, modal=True,
-                       use_custom_titlebar=True, font=font, location=(100, 100))
-    while True:
-        event, values = window.read()
-        if event == 'Ok':
-            try:
-                out_list = values["_LISTBOX_C_"]
-                break
-            except:
-                sg.popup_error('No valid selection', location=(100, 100),font=font)
-                window.close()
-        if event in (sg.WIN_CLOSED, 'Ok'):
-            break
-    window.close()
-    return out_list
-
-
 def ask_skip_input_file(config):
-    '''     Function to ask if user wants to skip file for writing epochs.     '''
-    ch = sg.popup_yes_no("Do you want to skip this file?",
-                         title="YesNo", location=(100, 100),font=font)
-    if ch == 'Yes':
+    '''     Function to ask if user wants to use the current EEG file.     '''
+    ch = sg.popup_yes_no("Is the EEG quality sufficient for further processing?",
+                         location=(100, 100),font=font)
+    if ch == 'No':
         config['skip_input_file'] = 1
     else:
         config['skip_input_file'] = 0
@@ -435,7 +409,7 @@ def ask_sample_frequency(config,settings):
     # note:sample_frequencies read from config file
     tooltip = 'xxx'
     layout = [
-        [sg.Text("Select sample frequency", tooltip=tooltip)],
+        [sg.Text("Select sample frequency", tooltip=tooltip, background_color='white')],
         [sg.Listbox(values=settings['sample_frequencies'], size=(15, None), enable_events=True, bind_return_key=True,
                     select_mode='single', key='_LISTBOX_F_', background_color='white')],
         [sg.Button('Ok', bind_return_key=True,)]
@@ -458,12 +432,11 @@ def ask_sample_frequency(config,settings):
     window.close()
     return config
 
-
 def ask_epoch_length(config,settings):
     '''     Function to ask epoch length.     '''
     tooltip = 'Enter a number for epoch length between 1 and 100 seconds (int or float)'
     layout = [
-        [sg.Text("Enter epoch length in seconds:", tooltip=tooltip)],
+        [sg.Text("Enter epoch length in seconds:", tooltip=tooltip, background_color='white')],
         [sg.InputText(default_text=settings['default_epoch_length'],
                       key='-EPOCH_LENGTH-')],
         [sg.Button('Ok', bind_return_key=True)]
@@ -484,22 +457,22 @@ def ask_epoch_length(config,settings):
     window.close()
     return config
 
-
 def ask_nr_ica_components(config,settings):
     '''     Function to ask number of ICA components.     '''
-    
-    tooltip = 'Enter number of ICA components'
     layout = [
-        [sg.Text("Enter number of ICA components:",
-                 tooltip=tooltip)],
+        [sg.Text("Enter number of ICA components:", background_color='white')],
         [sg.InputText(default_text=settings['default_ica_components'],
                       key='-ICA_COMPONENTS-')],
-        [sg.Button('Ok', bind_return_key=True)]
-    ]
+        [sg.Button('Ok', bind_return_key=True), sg.Push(background_color='white'), sg.Button('More info')]
+        ]
+    url = "https://mne.tools/stable/auto_tutorials/preprocessing/40_artifact_correction_ica.html"
     window = sg.Window("EEG processing input parameters", layout, modal=True, use_custom_titlebar=True, font=font, 
                        background_color='white', location=(100, 100))
     while True:
         event, values = window.read()
+        if event == 'More info':
+            wb.open_new_tab(url)
+            continue
         if event == 'Ok':
             try:
                 config['nr_ica_components'] = int(values["-ICA_COMPONENTS-"])
@@ -513,20 +486,22 @@ def ask_nr_ica_components(config,settings):
     window.close()
     return config
 
-
 def ask_downsample_factor(config,settings):
     '''     Function to ask downsample factor.     '''
-    tooltip = 'Enter a whole number to downsample by between 1 (no downsampling) and 100 (see https://mne.tools/stable/generated/mne.filter.resample.html)'
+    url = "https://mne.tools/stable/generated/mne.filter.resample.html"
     layout = [
-        [sg.Text("Enter downsample factor (1 equals no downsampling):", tooltip=tooltip)],
+        [sg.Text("Enter whole number as downsample factor (1 equals no downsampling):", background_color='white')],
         [sg.InputText(default_text=settings['default_downsample_factor'],
                       key='-DOWNSAMPLE_FACTOR-')],
-        [sg.Button('Ok', bind_return_key=True)]
+        [sg.Button('Ok', bind_return_key=True), sg.Push(background_color='white'), sg.Button('More info')]
     ]
     window = sg.Window("EEG processing input parameters", layout, modal=True, use_custom_titlebar=True, font=font, 
                        background_color='white', location=(100, 100))
     while True:
         event, values = window.read()
+        if event == 'More info':
+            wb.open_new_tab(url)
+            continue
         if event == 'Ok':
             try:
                 config['downsample_factor'] = int(
@@ -540,7 +515,6 @@ def ask_downsample_factor(config,settings):
     window.close()
     return config
 
-
 def set_batch_related_names(config):
     '''
     Function that performs the actions necessary to define all file/folder/path names
@@ -552,9 +526,9 @@ def set_batch_related_names(config):
     dt = today.strftime('%Y%m%d_%H%M%S')  # suffix
     if config['rerun']==0:
         tooltip = 'Enter a prefix (e.g. study name) for this batch. The log file will be named <prefix><timestamp>.log'
-        txt="Enter a prefix for this batch (e.g. BIOCOG_batch1)\n(This prefix will be used to create the subdirectory for this batch)\n(Prefix should not contain spaces):"
+        txt="Enter a name for this file batch (e.g. study1_batch1).\nThis name should not contain spaces."
         layout = [
-            [sg.Text(text=txt, tooltip=tooltip)],
+            [sg.Text(text=txt, tooltip=tooltip, background_color='white')],
             [sg.InputText(key='-BATCH_PREFIX-')],
             [sg.Button('Ok', bind_return_key=True)]
         ]
@@ -592,7 +566,6 @@ def set_batch_related_names(config):
     fn = config['batch_name'] + '.pkl'
     config['config_file'] = os.path.join(config['batch_output_subdirectory'], fn)
     return config
-
 
 def set_file_output_related_names(config):
     # Scope:in file loop
@@ -688,7 +661,7 @@ def create_spatial_filter(raw_b,config):
                                pick_ori='max-power',
                                weight_norm='unit-noise-gain',
                                rank=None,
-                               )  # *2
+                               )
     return spatial_filter
 
 def create_raw(config,montage,no_montage_files):
@@ -803,7 +776,7 @@ def plot_power_spectrum(raw, filtered=False):
         picks='eeg', exclude=[])
     axes = fig.get_axes()
     if filtered:
-        axes[0].set_title("Band 0.5-45 Hz filtered power spectrum.")
+        axes[0].set_title("Band 0.5-47 Hz filtered power spectrum.")
     else:
         axes[0].set_title("Unfiltered power spectrum")
     fig.tight_layout(rect=[0, 0, 1, 0.95])
@@ -811,12 +784,12 @@ def plot_power_spectrum(raw, filtered=False):
     
 def perform_temp_down_sampling(raw,config):
     '''
-    Function that down samples the temporary raw EEG to 250 or 256 Hz depending on the sample frequency
+    Function that down samples the temporary raw EEG to 500 or 512 Hz depending on the sample frequency
     (power of 2 or not). This should speed up preprocessing.
     '''
-    temporary_sample_f = 256 if config['sample_frequency'] % 256 == 0 else 250
+    temporary_sample_f = 512 if config['sample_frequency'] % 512 == 0 else 500
     print("temp. sample fr:", temporary_sample_f)
-    raw.resample(temporary_sample_f, npad="auto")
+    raw.resample(temporary_sample_f, method='fft')
     return raw, temporary_sample_f
 
 def perform_average_reference(raw):
@@ -840,18 +813,19 @@ def perform_beamform(raw,config):
     spatial_filter = create_spatial_filter(raw,config)
     return spatial_filter
 
-def perform_epoch_selection(raw,config):
+def perform_epoch_selection(raw,config,sfreq):
     '''
     Function that performs epoch selection on the raw file. 
     This function is for use on the temporary raw object.
-    '''
+    '''    
     events = mne.make_fixed_length_events(raw, duration=(config['epoch_length']))
     epochs = mne.Epochs(raw, events=events, tmin=0, tmax=(
-        config['epoch_length']-(1/temporary_sample_f)), baseline=(0, config['epoch_length']-(1/temporary_sample_f)), preload=True)
-
+        config['epoch_length']-(1/sfreq)), 
+            baseline=(0, config['epoch_length']-(1/sfreq)), preload=True)
+    
     # Generate events at each second as seconds markers for the epochs plot
     time_event_ids = np.arange(config['epoch_length']*len(events))
-    time_event_samples = (temporary_sample_f * time_event_ids).astype(int)
+    time_event_samples = (sfreq * time_event_ids).astype(int)
     time_events = np.column_stack(
         (time_event_samples, np.zeros_like(time_event_samples), time_event_ids))
 
@@ -861,7 +835,7 @@ def perform_epoch_selection(raw,config):
     epochs.plot(n_epochs=1, n_channels=len(
         raw.ch_names), events=time_events, event_color= 'm',block=True, picks=['eeg', 'eog', 'ecg'])
 
-    config[file_name, 'epochs'] = epochs.selection  # *1
+    config[file_name, 'epochs'] = epochs.selection
     return config
  
 def apply_epoch_selection(raw_output,config,sfreq,filtering=False,l_freq=None,h_freq=None):
@@ -884,7 +858,7 @@ def apply_epoch_selection(raw_output,config,sfreq,filtering=False,l_freq=None,h_
 def filter_output_raw(raw_output,config,l_freq,h_freq):
     '''
     Applys a FIR bandpass filter to the raw EEG object. If either ICA or Beamforming is also applied,
-    bandpass filtering at 0.5-45 Hz (or broader frequencies) is not performed a second time. The transition
+    bandpass filtering at 0.5-47 Hz (or broader frequencies) is not performed a second time. The transition
     band is calculated in a separate function.
     '''
     l_freq = float(l_freq)
@@ -895,9 +869,9 @@ def filter_output_raw(raw_output,config,l_freq,h_freq):
         l_freq = None
         print("No additional (<) 0.5 Hz high pass filter applied, already broadband filtered before beamformer and/or ICA")
     
-    if (config['apply_beamformer'] or config['apply_ica']) and (h_freq >= 45):
+    if (config['apply_beamformer'] or config['apply_ica']) and (h_freq >= 47):
         h_freq = None
-        print("No additional (>) 45 Hz low pass filter applied, already broadband filtered before beamformer and/or ICA")
+        print("No additional (>) 47 Hz low pass filter applied, already broadband filtered before beamformer and/or ICA")
     
     if not (l_freq==None and h_freq==None):
         raw_output= raw_output.copy().filter(l_freq=l_freq, h_freq=h_freq,
@@ -943,10 +917,10 @@ def save_epoch_data_to_txt(epoch_data, base, scalings=None,filtering=False,l_fre
         epoch_df = np.round(epoch_df, decimals=settings['output_txt_decimals'])
         
         if (config['apply_beamformer'] or config['apply_ica']) and l_freq <= 0.5:
-            l_freq = 0.5 # Since both beamformer and ICA already bandpass filter from 0.5 to 45 Hz
+            l_freq = 0.5 # Since both beamformer and ICA already bandpass filter from 0.5 to 47 Hz
             
-        if (config['apply_beamformer'] or config['apply_ica']) and h_freq >= 45.0:
-            h_freq = 45 # Since both beamformer and ICA already bandpass filter from 0.5 to 45 Hz
+        if (config['apply_beamformer'] or config['apply_ica']) and h_freq >= 47.0:
+            h_freq = 47 # Since both beamformer and ICA already bandpass filter from 0.5 to 47 Hz
         
         if filtering or config['apply_beamformer'] or config['apply_ica']:
             file_name_out = base + "_" + str(l_freq) + "-" + str(h_freq) + " Hz_Epoch_"  + str(i + 1) + ".txt"
@@ -961,10 +935,10 @@ def save_epoch_data_to_txt(epoch_data, base, scalings=None,filtering=False,l_fre
 def calc_filt_transition(cutoff_freq):
     '''
     Function that returns the FIR filter transition bandwidth based on the cutoff
-    frequency. Below 5 Hz, this is 0.5 (minimum), while above 15 Hz this is 1.5 Hz
-    (maximum). Below 0.5 Hz, the cutoff frequency is used as transition bandwidth.
+    frequency. Below 5 Hz, this is 0.4 (minimum), while above 15 Hz this is 1.5 Hz
+    (maximum). Below 0.4 Hz, the cutoff frequency is used as transition bandwidth.
     '''
-    base_transition = min(max(cutoff_freq * 0.1, 0.5), 1.5)
+    base_transition = min(max(cutoff_freq * 0.1, 0.4), 1.5)
     return float(min(base_transition, cutoff_freq))
 
 def save_whole_EEG_to_txt(raw_output,config,base,scalings=None,filtering=False,l_freq=0.0,h_freq=1000.0):
@@ -993,7 +967,7 @@ def save_whole_EEG_to_txt(raw_output,config,base,scalings=None,filtering=False,l
 ##################################################################################
 
 window = sg.Window('MNE-python based EEG Preprocessing', layout, location=(
-    30, 30), size=(1000, 550), finalize=True, font=font)
+    30, 30), size=(1000, 750), background_color="#E6F3FF", finalize=True, font=font)
 
 progress_bar_files = window.find_element('progressbar_files')
 progress_bar_epochs = window.find_element('progressbar_epochs')
@@ -1023,8 +997,8 @@ while True:# @noloop remove
         msg = 'You may now start processing'
         window['-RUN_INFO-'].update(msg+'\n', append=True)
         
-    elif event == 'Enter parameters for this batch':
-        print('Enter parameters for this batch')
+    elif event == 'Choose settings for this batch':
+        print('Choose settings for this batch')
         config = create_dict()  # before file loop
         config['rerun'] = 0
         config = select_input_file_paths(config, settings) # gui file explorer
@@ -1104,8 +1078,8 @@ while True:# @noloop remove
 
                 plot_power_spectrum(raw_temp, filtered=False)
 
-                raw_temp.filter(l_freq=0.5, h_freq=45, l_trans_bandwidth=0.5, \
-                                h_trans_bandwidth=3, picks='eeg')
+                raw_temp.filter(l_freq=0.5, h_freq=47, l_trans_bandwidth=0.4, \
+                                h_trans_bandwidth=1.5, picks='eeg')
                 
                 # To ensure bad channels are reloaded during a rerun:
                 if config['rerun'] == 1:
@@ -1133,23 +1107,27 @@ while True:# @noloop remove
                 if config['apply_beamformer']:
                     spatial_filter = perform_beamform(raw_temp,config)
                 
-                raw_temp,temporary_sample_f = perform_temp_down_sampling(raw_temp,config)
-                
+                if config['sample_frequency'] > 1000:
+                    raw_temp,temporary_sample_f = perform_temp_down_sampling(raw_temp,config)
+                else:
+                    temporary_sample_f = config['sample_frequency']
+                    
+                raw_temp = perform_average_reference(raw_temp)
+                                
                 if config['apply_epoch_selection']:
                     plot_power_spectrum(raw_temp, filtered=True)
 
-                raw_temp = perform_average_reference(raw_temp)
-
                 if config['apply_epoch_selection']:
-                    config = perform_epoch_selection(raw_temp,config)
+                    config = perform_epoch_selection(raw_temp,config,temporary_sample_f)
+
 
                 # ********** Preparation of the final raw file and epochs for export **********                
                 raw = apply_bad_channels(raw,config)
 
                 if config['apply_ica'] or config['apply_beamformer']:
-                    raw.filter(l_freq=0.5, h_freq=45, l_trans_bandwidth=0.5,
-                               h_trans_bandwidth=4, picks='eeg')
-                    msg = "Output signal filtered to 0.5-45 Hz (transition bands 0.5 Hz and 4 Hz resp. \
+                    raw.filter(l_freq=0.5, h_freq=47, l_trans_bandwidth=0.4,
+                               h_trans_bandwidth=1.5, picks='eeg')
+                    msg = "Output signal filtered to 0.5-47 Hz (transition bands 0.4 Hz and 1.5 Hz resp. \
                         Necessary for ICA and/or Beamforming"
                     window['-RUN_INFO-'].update(msg+'\n', append=True)
 
@@ -1166,6 +1144,8 @@ while True:# @noloop remove
 
                 if config['apply_beamformer']:
                     raw_beamform_output = raw.copy()
+                    if not config['apply_ica']:
+                        raw_beamform_output = perform_average_reference(raw_beamform_output)
                     raw_beamform_output.drop_channels(config[file_name, 'bad'])
                     msg = "Dropped " + str(len(config[file_name, 'bad'])) + \
                         " bad channels on beamformed output signal"
@@ -1177,9 +1157,12 @@ while True:# @noloop remove
                     raw_source = apply_spatial_filter(raw_beamform_output, config, spatial_filter)
 
                 config['downsampled_sample_frequency'] = config['sample_frequency']//config['downsample_factor']
+                
                 if config['downsample_factor'] != 1:
                     raw.resample(config['downsampled_sample_frequency'], npad="auto")
-                    msg = "Non-beamformed output signal downsampled to " + \
+                    if config['apply_beamformer']:
+                        raw_source.resample(config['downsampled_sample_frequency'], npad="auto")
+                    msg = "Output signal downsampled to " + \
                         str(config['downsampled_sample_frequency']) + " Hz"
                 else:
                     msg = "No downsampling applied to output signal"
@@ -1188,7 +1171,7 @@ while True:# @noloop remove
                 root, ext = os.path.splitext(file_path) ### Nog nodig?
 
                 # Create output epochs and export to .txt
-                if config['apply_epoch_selection']:# rename to epoch_output #*3
+                if config['apply_epoch_selection']:
                     selected_epochs_sensor = apply_epoch_selection(raw, config, config['downsampled_sample_frequency'])
 
                     len2 = len(selected_epochs_sensor)
@@ -1223,8 +1206,6 @@ while True:# @noloop remove
                         
                         if config['apply_output_filtering']:
                             
-                            #frequency_band_pairs = list(zip(config['frequency_bands'][::2], config['frequency_bands'][1::2]))
-
                             for low_band, high_band in frequency_band_pairs:
                                 selected_epochs_source_filt = apply_epoch_selection(
                                     raw_source,config,sfreq=config['downsampled_sample_frequency'],
