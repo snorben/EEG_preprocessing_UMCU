@@ -415,7 +415,7 @@ def ask_sample_frequency(config,settings):
         [sg.Button('Ok', bind_return_key=True,)]
     ]
     window = sg.Window("EEG processing input parameters", layout, modal=True,
-                       use_custom_titlebar=True, font=font, location=(100, 100))
+                       use_custom_titlebar=True, font=font, location=(100, 100), background_color='white')
     while True:
         event, values = window.read()
         
@@ -664,32 +664,111 @@ def create_spatial_filter(raw_b,config):
                                )
     return spatial_filter
 
-def create_raw(config,montage,no_montage_files):
+# def create_raw(config,montage,no_montage_files):
+#     '''
+#     Function used to load a raw EEG file using the correct MNE function based on the file type that has to be
+#     loaded (.txt, .bdf, .eeg or .edf). Note:for .eeg files the header (.vhdr) is primarily loaded by MNE. For
+#     non-.eeg files, the electrode montage is also set, supplying spatial coordinates needed for interpolation
+#     and beamforming of the EEG. For .eeg files, this information is already read from the header file.
+#     '''
+#     if config['file_pattern'] == "*.txt":
+#         with open(file_path, "r") as file:
+#             df = pd.read_csv(
+#                 file, sep='\t', index_col=False, header=0)
+
+#         if config['channel_names'] == []:# only do this once
+#             ch_names = list(df.columns)
+#             config['channel_names'] = ch_names
+#         ch_types = ["eeg"]*len(ch_names)
+#         info = mne.create_info(
+#             ch_names=ch_names, sfreq=config['sample_frequency'], ch_types=ch_types)
+#         df = df.iloc[:, 0:len(ch_names)]
+#         samples = df.T*1e-6  # Scaling from µV to V
+#         raw = mne.io.RawArray(samples, info)
+#         #config['sample_frequency'] = raw.info["sfreq"] # Niet nodig toch?
+#         missing = df.columns[df.isna().any()].tolist()
+#         if missing != '[]':
+#             sg.popup_ok('Warning:channels with missing values found: ',
+#                         missing, "please drop these channel(s)!", location=(100, 100),font=font)
+
+def create_raw(config, montage, no_montage_files):
     '''
-    Function used to load a raw EEG file using the correct MNE function based on the file type that has to be
-    loaded (.txt, .bdf, .eeg or .edf). Note:for .eeg files the header (.vhdr) is primarily loaded by MNE. For
-    non-.eeg files, the electrode montage is also set, supplying spatial coordinates needed for interpolation
-    and beamforming of the EEG. For .eeg files, this information is already read from the header file.
+    Function used to load a raw EEG file using the correct MNE function based on the file type.
+    Now handles .txt files both with and without headers by detecting if the first row contains numeric data.
+    If no header is present, it generates channel names automatically (CH1, CH2, etc.).
     '''
     if config['file_pattern'] == "*.txt":
         with open(file_path, "r") as file:
-            df = pd.read_csv(
-                file, sep='\t', index_col=False, header=0)
-
-        if config['channel_names'] == []:# only do this once
-            ch_names = list(df.columns)
-            config['channel_names'] = ch_names
-        ch_types = ["eeg"]*len(ch_names)
+            first_line = file.readline().strip()
+            
+        # Try to convert first line values to float to check if they're numeric
+        try:
+            first_values = [float(x) for x in first_line.split('\t')]
+            has_header = False
+        except ValueError:
+            has_header = True
+            
+        if has_header:
+            df = pd.read_csv(file_path, sep='\t', index_col=False, header=0)
+            if config['channel_names'] == []:
+                ch_names = list(df.columns)
+                config['channel_names'] = ch_names
+        else:
+            df = pd.read_csv(file_path, sep='\t', index_col=False, header=None)
+            if config['channel_names'] == [] and settings['montage', config['input_file_pattern']] == ".txt_bio64":
+                ch_names = [
+                'Fp1', 'AF7', 'AF3', 'F1', 'F3', 'F5', 'F7', 'FT7',
+                'FC5', 'FC3', 'FC1', 'C1', 'C3', 'C5', 'T7', 'TP7',
+                'CP5', 'CP3', 'CP1', 'P1', 'P3', 'P5', 'P7', 'P9',
+                'PO7', 'PO3', 'O1', 'Iz', 'Oz', 'POz', 'Pz', 'CPz',
+                'Fpz', 'Fp2', 'AF8', 'AF4', 'AFz', 'Fz', 'F2', 'F4',
+                'F6', 'F8', 'FT8', 'FC6', 'FC4', 'FC2', 'FCz', 'Cz',
+                'C2', 'C4', 'C6', 'T8', 'TP8', 'CP6', 'CP4', 'CP2',
+                'P2', 'P4', 'P6', 'P8', 'P10', 'PO8', 'PO4', 'O2'
+                ]
+                # Check if number of channels matches BioSemi64
+                if len(ch_names) != df.shape[1]:
+                    sg.popup_ok(f'Warning: File has {df.shape[1]} channels but BioSemi64 requires 64 channels.\n'
+                              'Using generic channel names instead.',
+                              location=(100, 100))
+                    ch_names = [f'CH{i+1}' for i in range(df.shape[1])]
+                config['channel_names'] = ch_names
+            else:
+                ch_names = [f'CH{i+1}' for i in range(df.shape[1])]
+                config['channel_names'] = ch_names
+                
+        ch_types = ["eeg"] * len(ch_names)
         info = mne.create_info(
-            ch_names=ch_names, sfreq=config['sample_frequency'], ch_types=ch_types)
+            ch_names=ch_names, 
+            sfreq=config['sample_frequency'], 
+            ch_types=ch_types
+        )
+        
+        # Ensure we're only taking the data columns
         df = df.iloc[:, 0:len(ch_names)]
-        samples = df.T*1e-6  # Scaling from µV to V
+        
+        try:
+            df = df.astype(float)
+        except ValueError as e:
+            raise ValueError(f"Non-numeric values found in the data. Please check your file format. Error: {e}")
+            
+        samples = df.T * 1e-6  # Scaling from µV to V
         raw = mne.io.RawArray(samples, info)
-        #config['sample_frequency'] = raw.info["sfreq"] # Niet nodig toch?
-        missing = df.columns[df.isna().any()].tolist()
-        if missing != '[]':
-            sg.popup_ok('Warning:channels with missing values found: ',
-                        missing, "please drop these channel(s)!", location=(100, 100),font=font)
+        
+        # Check for missing values
+        missing_channels = []
+        for col in df.columns:
+            if df[col].isna().any():
+                missing_channels.append(str(col))
+                
+        if missing_channels:
+            missing_str = ', '.join(missing_channels)
+            sg.popup_ok(f'Warning: channels with missing values found:\n{missing_str}\n'
+                       'Please drop these channel(s)!',
+                       location=(100, 100))
+            
+        return raw, config
+        
     elif config['file_pattern'] == "*.bdf":
         raw = mne.io.read_raw_bdf(file_path, preload=True)
     elif config['file_pattern'] == "*.vhdr":
@@ -697,7 +776,7 @@ def create_raw(config,montage,no_montage_files):
     elif config['file_pattern'] == "*.edf":
         raw = mne.io.read_raw_edf(file_path, preload=True)
     elif config['file_pattern'] == "*.fif":
-        raw = mne.io.read_raw_fif(file_path, preload=True, )
+        raw = mne.io.read_raw_fif(file_path, preload=True)
         raw.pick_types(eeg=True, meg=False, eog=False)
     
     if config['file_pattern'] not in no_montage_files:
