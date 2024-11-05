@@ -715,7 +715,7 @@ def create_raw(config, montage, no_montage_files):
                 config['channel_names'] = ch_names
         else:
             df = pd.read_csv(file_path, sep='\t', index_col=False, header=None)
-            if config['channel_names'] == [] and settings['montage', config['input_file_pattern']] == ".txt_bio64":
+            if config['channel_names'] == [] and settings['montage', config['input_file_pattern']] == "biosemi64":
                 ch_names = [
                 'Fp1', 'AF7', 'AF3', 'F1', 'F3', 'F5', 'F7', 'FT7',
                 'FC5', 'FC3', 'FC1', 'C1', 'C3', 'C5', 'T7', 'TP7',
@@ -790,49 +790,6 @@ def update_channels_to_be_dropped (raw,config):
     channels_to_be_dropped = select_channels_to_be_dropped(channel_names)  # ask user to select
     config['channels_to_be_dropped'] = channels_to_be_dropped # store for rerun function
     return raw,config
-
-# def perform_ica (raw,raw_temp,config):
-#     '''     Function to perform ICA     '''
-#     # ask # components (this is per file)
-#     msg = 'Max # components = ' + \
-#         str(config['max_channels'])
-#     window['-RUN_INFO-'].update(msg+'\n', append=True)
-
-#     # Preparation of clean raw object to calculate ICA on
-#     raw_ica = raw.copy()
-#     raw_ica.filter(l_freq=1, h_freq=47,l_trans_bandwidth=0.5, h_trans_bandwidth=1.5)
-
-#     raw_ica.info['bads'] = config[file_name, 'bad']
-#     raw_ica.interpolate_bads(reset_bads=True)
-
-#     # Fitting the ICA
-#     ica = ICA(n_components=config['nr_ica_components'],
-#               method='fastica')
-#     ica.fit(raw_ica,  picks='eeg')
-#     ica
-
-#     ica.plot_components()  # head plot heat map
-#     ica.plot_sources(raw_ica, block=True)
-
-#     # https://mne.discourse.group/t/variance-of-ica-components/5544/2
-#     # unitize variances explained by PCA components, so the values sum to 1
-#     pca_explained_variances = ica.pca_explained_variance_ / \
-#         ica.pca_explained_variance_.sum()
-#     ica_explained_variances = pca_explained_variances[:ica.n_components_]
-#     cumul_pct = 0.0
-
-#     for idx, var in enumerate(ica_explained_variances):
-#         pct = round(100 * var, 2)
-#         cumul_pct += pct
-#         msg = 'Explained variance for ICA component ' + \
-#             str(idx) + ': ' + str(pct) + '%' + \
-#             ' ('+str(round(cumul_pct, 1)) + ' %)'
-#         window['-RUN_INFO-'].update(msg+'\n', append=True)
-
-#     ica.apply(raw_temp)
-    
-#     return raw_temp,ica,config
-
 
 def perform_ica(raw, raw_temp, config):
     '''     
@@ -1183,47 +1140,7 @@ while True:# @noloop remove
                 msg = '\n*** Processing file ' + file_path + ' ***'
                 window['-RUN_INFO-'].update(msg+'\n', append=True)
                 window['-FILE_INFO-'].update(msg+'\n', append=True)
-                
-                # # create_raw(file_path
-                # raw,config = create_raw(config,montage,no_montage_patterns)   
-                    
-                # # update_channels_to_be_dropped
-                # if config['rerun'] == 0 and config['channels_to_be_dropped_selected'] == 0:
-                #     raw,config = update_channels_to_be_dropped (raw,config)
-                #     config['channels_to_be_dropped_selected'] = 1
-                # raw.drop_channels(config['channels_to_be_dropped'])
-                
-                # # Temporary raw file to work with during preprocessing, raw is used to finally export data
-                # raw_temp = raw.copy()
-
-                # plot_power_spectrum(raw_temp, filtered=False)
-
-                # raw_temp.filter(l_freq=0.5, h_freq=47, l_trans_bandwidth=0.4, \
-                #                 h_trans_bandwidth=1.5, picks='eeg')
-                
-                # # To ensure bad channels are reloaded during a rerun:
-                # if config['rerun'] == 1:
-                #     raw_temp.info['bads'] = config[file_name, 'bad']
-                    
-                # raw_temp,config = perform_bad_channels_selection(raw_temp, config)
-                # raw_temp.interpolate_bads(reset_bads=True)
-                
-                # # ask_skip_input_file(config) to allow user to skip current EEG file
-                # config = ask_skip_input_file(config)
-                # if config['skip_input_file'] == 1:
-                #     msg = 'File ' + file_path + ' skipped'
-                #     window['-FILE_INFO-'].update(msg+'\n', append=True)
-                #     filenum += 1
-                #     progress_bar_files.UpdateBar(filenum, lfl)
-                #     continue
-                
-                # # determine max nr_channels (= upper limit of nr of ICA components) @@@
-                # config['max_channels'] = int(len(raw.ch_names)- 1 -len(config[file_name, 'bad'])) # @@@ check
-                # print("max ICA channels:", config['max_channels'])
-
-                # if config['apply_ica']:
-                #     raw_temp,ica,config = perform_ica(raw, raw_temp, config)
-                
+                           
                 raw, config = create_raw(config, montage, no_montage_patterns)   
                 
                 if config['rerun'] == 0 and config['channels_to_be_dropped_selected'] == 0:
@@ -1275,26 +1192,6 @@ while True:# @noloop remove
 
 
                 # ********** Preparation of the final raw file and epochs for export **********                
-                # raw = apply_bad_channels(raw,config)
-
-                # if config['apply_ica'] or config['apply_beamformer']:
-                #     raw.filter(l_freq=0.5, h_freq=47, l_trans_bandwidth=0.4,
-                #                h_trans_bandwidth=1.5, picks='eeg')
-                #     msg = "Output signal filtered to 0.5-47 Hz (transition bands 0.4 Hz and 1.5 Hz resp. \
-                #         Necessary for ICA and/or Beamforming"
-                #     window['-RUN_INFO-'].update(msg+'\n', append=True)
-
-                # if config['apply_ica']:
-                #     ica.apply(raw)
-                #     msg = "Ica applied to output signal"
-                #     window['-RUN_INFO-'].update(msg+'\n', append=True)
-
-                #     raw = perform_average_reference(raw)
-                #     msg = "Average reference set on output signal"
-                # else:
-                #     msg = "No rereferencing applied"
-                # window['-RUN_INFO-'].update(msg+'\n', append=True)
-                
                 if config['apply_ica'] or config['apply_beamformer']:
                     raw.filter(l_freq=0.5, h_freq=47, l_trans_bandwidth=0.4,
                                h_trans_bandwidth=1.5, picks='eeg')
