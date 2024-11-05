@@ -18,7 +18,8 @@ sg.theme('Default1')
 font = ("Ubuntu Medium", 14)
 f_font=("Courier New", 12) # font filter frequency inputs
 f_size=5 # font size filter frequency inputs
-my_image = sg.Image('UMC_logo.png')  # UMC logo
+my_image = sg.Image('UMC_logo.png', subsample=2, pad=(0,0), background_color="#E6F3FF")  # UMC logo
+
 sg.set_options(tooltip_font=(16))  # tootip size
 settings={}
 filter_settings={}
