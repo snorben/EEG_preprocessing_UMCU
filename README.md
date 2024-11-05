@@ -3,14 +3,14 @@
 With our software, we hope to provide users with an accessible way to preprocess resting-state EEG files, while still including powerful analysis tools. We do this by combining several functions from the MNE (MEG/EEG preprocessing) open-source project. By using an intuitive graphical user interface on top of a Python script, we hope that our software is easy to start using without coding experience, while still allowing more experienced users to adapt the software to their needs by altering the underlying code. 
 
 The software is currently able to:
-- Open EEG files of type .txt, .bdf, .edf, .eeg and .fif.
+- Open raw EEG files of type .txt, .bdf, .edf, .eeg and .fif.
 - Open a single EEG or choose analysis settings for an entire batch of files.
 - Apply a montage to the raw EEG (including electrode coordinates necessary for some analyses).
 - Drop bad channels entirely.
 - Interpolate bad channels after visual inspection.
 - Apply an average reference.
 - Apply independent component analysis to remove artefacts.
-- Apply beamformer source reconstruction to the EEG.
+- Apply beamformer source reconstruction to the EEG (standard MNE LCMV beamformer with standard head model).
 - Down sample the file to a lower sample frequency.
 - Perform interactive visual epoch selection.
 - Perform filtering in different frequency bands and broadband output.
@@ -20,13 +20,26 @@ The software is currently able to:
 The software is not (yet) able to:
 - Analyse task EEG data.
 - Calculate quantitative features on the output epochs (coming in the near future).
-- Open EEG files with data types not mentioned previously.
+- Open EEG files with data types not mentioned previously (you can put this in a new GitHub issue if you need another filetype).
+
+### Tips for use and known issues
+When choosing the settings for the current analysis batch, most windows contain a "more info" button which will take you to an appropriate MNE documentation page.
+
+When no raw EEG files show up in the file selection window, please choose a different file type in the dropdown menu on the right (it might be stuck on only showing .txt files for instance).
+
+For the bad channel selection (for interpolation), you can select bad channels by clicking the channel names on the left side of the plot. The deselected (grey) channels will be interpolated. For ICA, this works the same but then artefact-containing components can be deselected in the graph plot of the ICA. These components will be filtered out of the EEG. For interactive epoch selection, epochs of insufficient quality can be deselected by clicking anywhere on the epoch, which will then turn red. This means the epoch will not be saved. 
+
+If the program glitches or stops working, we found that it works best to stop the Python process, for instance by clicking the red stop button or restarting the kernel in Spyder IDE or similar.
+
+There is currently an unresolved problem where removing multiple ICA components and/or interpolating channels can result in a data rank that is too low to caculate the beamforming solution. See [here](https://mailman.science.ru.nl/pipermail/fieldtrip/2014-March/033565.html) for an explanation of this problem.
+
+When using Spyder IDE to run the program (like we do), Spyder prompts the user that Spyder does not have the spyder-kernels module. Please follow the instructions provided by Spyder. 
 
 ## Installation
 
 This guide will walk you through the process of setting up the EEG Preprocessing Tool using Miniconda. Miniconda provides an easy way to create isolated Python environments and manage package dependencies.
 
-### 1. Install Miniconda
+### 1. Install Miniconda and Git
 
 First, download and install Miniconda:
 
@@ -35,6 +48,8 @@ First, download and install Miniconda:
 - For Linux: [Miniconda Linux Installer](https://docs.conda.io/en/latest/miniconda.html#linux-installers)
 
 Follow the installation instructions provided on the Miniconda website.
+
+If not done already, [install Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git).
 
 ### 2. Set up a Conda Environment
 
@@ -67,7 +82,7 @@ python -m pip install .
 
 ### 5. Verify Installation
 
-To verify that the installation was successful, you can try running the main script (eeg_processing_script.py) in your favorite way (we have used Spyder to run the script during development). When opening the script in an IDE like Spyder, you can simply press 'run' to start the script. If everything is set up correctly, the script should run without any import errors.
+To verify that the installation was successful, you can try running the main script (eeg_processing_script.py) in your favorite way (we have used Spyder to run the script during development). For the first use, it is important to select your newly created Miniconda environment in your IDE. In Spyder this is done via: preferences > Python interpreter > use the following interpreter. When opening the script in an IDE like Spyder, you can simply press 'run' to start the script. If everything is set up correctly, the script should run without any import errors.
 
 ## Troubleshooting
 
