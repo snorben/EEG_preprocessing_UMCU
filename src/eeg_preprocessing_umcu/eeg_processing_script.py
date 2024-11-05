@@ -49,27 +49,6 @@ button_style = {
     'mouseover_colors': ('#FFFFFF', '#1976D2'),  # Slightly darker blue on hover
 }
 
-# layout = [
-#     [sg.Text('',font=('Default', 3), background_color="#E6F3FF")], 
-#     [sg.Button('Choose settings for this batch', **button_style), 
-#      sg.Button('Rerun previous batch', **button_style), sg.Button('Start processing', **button_style)],
-#     [sg.Text('',font=('Default', 3), background_color="#E6F3FF")], 
-#     [sg.Text('File info', font=('Default', 14, 'bold'), background_color="#E6F3FF")],
-#     [sg.Multiline('', autoscroll=True, size=(120, 10), k='-FILE_INFO-', reroute_stdout=True)],
-#     [sg.Text('Run info', font=('Default', 14, 'bold'), background_color="#E6F3FF")],
-#     [sg.Multiline('', autoscroll=True, size=(120, 10), k='-RUN_INFO-', reroute_stdout=True)],
-#     [sg.ProgressBar(progress_value1, orientation='h', size=(110, 10), 
-#                    key='progressbar_files', bar_color=['red', 'lightgrey'])],
-#     [sg.ProgressBar(progress_value2, orientation='h', size=(110, 10), 
-#                    key='progressbar_epochs', bar_color=['#003DA6', 'lightgrey'])],
-#     [sg.Text('',font=('Default', 3))], 
-#     [sg.Button('Exit', button_color=exit_button_color, 
-#                border_width=0, pad=(10, 5), mouseover_colors=('#FFFFFF', 'firebrick'))],
-#     [sg.Text('Yorben Lodema \nHerman van Dellen',font=('Default', 12), background_color="#E6F3FF")], 
-#     #[sg.Column([[my_image]], justification='right')]
-#     [sg.Push(), sg.Column([[my_image]], pad=(0,0))]  # Modified this line
-# ]
-
 layout = [
     [sg.Column([
         [sg.Text('',font=('Default', 3), background_color="#E6F3FF")], 
