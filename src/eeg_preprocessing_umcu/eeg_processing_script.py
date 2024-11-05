@@ -664,33 +664,6 @@ def create_spatial_filter(raw_b,config):
                                )
     return spatial_filter
 
-# def create_raw(config,montage,no_montage_files):
-#     '''
-#     Function used to load a raw EEG file using the correct MNE function based on the file type that has to be
-#     loaded (.txt, .bdf, .eeg or .edf). Note:for .eeg files the header (.vhdr) is primarily loaded by MNE. For
-#     non-.eeg files, the electrode montage is also set, supplying spatial coordinates needed for interpolation
-#     and beamforming of the EEG. For .eeg files, this information is already read from the header file.
-#     '''
-#     if config['file_pattern'] == "*.txt":
-#         with open(file_path, "r") as file:
-#             df = pd.read_csv(
-#                 file, sep='\t', index_col=False, header=0)
-
-#         if config['channel_names'] == []:# only do this once
-#             ch_names = list(df.columns)
-#             config['channel_names'] = ch_names
-#         ch_types = ["eeg"]*len(ch_names)
-#         info = mne.create_info(
-#             ch_names=ch_names, sfreq=config['sample_frequency'], ch_types=ch_types)
-#         df = df.iloc[:, 0:len(ch_names)]
-#         samples = df.T*1e-6  # Scaling from µV to V
-#         raw = mne.io.RawArray(samples, info)
-#         #config['sample_frequency'] = raw.info["sfreq"] # Niet nodig toch?
-#         missing = df.columns[df.isna().any()].tolist()
-#         if missing != '[]':
-#             sg.popup_ok('Warning:channels with missing values found: ',
-#                         missing, "please drop these channel(s)!", location=(100, 100),font=font)
-
 def create_raw(config, montage, no_montage_files):
     '''
     Function used to load a raw EEG file using the correct MNE function based on the file type.
