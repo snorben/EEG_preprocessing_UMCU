@@ -50,23 +50,26 @@ button_style = {
 }
 
 layout = [
-    [sg.Text('',font=('Default', 3), background_color="#E6F3FF")], 
-    [sg.Button('Choose settings for this batch', **button_style), 
-     sg.Button('Rerun previous batch', **button_style), sg.Button('Start processing', **button_style)],
-    [sg.Text('',font=('Default', 3), background_color="#E6F3FF")], 
-    [sg.Text('File info', font=('Default', 14, 'bold'), background_color="#E6F3FF")],
-    [sg.Multiline('', autoscroll=True, size=(120, 12), k='-FILE_INFO-', reroute_stdout=True)],
-    [sg.Text('Run info', font=('Default', 14, 'bold'), background_color="#E6F3FF")],
-    [sg.Multiline('', autoscroll=True, size=(120, 12), k='-RUN_INFO-', reroute_stdout=True)],
-    [sg.ProgressBar(progress_value1, orientation='h', size=(110, 10), 
-                   key='progressbar_files', bar_color=['red', 'lightgrey'])],
-    [sg.ProgressBar(progress_value2, orientation='h', size=(110, 10), 
-                   key='progressbar_epochs', bar_color=['#003DA6', 'lightgrey'])],
-    [sg.Text('',font=('Default', 3))], 
-    [sg.Button('Exit', button_color=exit_button_color, 
-               border_width=0, pad=(10, 5), mouseover_colors=('#FFFFFF', 'firebrick'))],
-    [sg.Text('Yorben Lodema \nHerman van Dellen',font=('Default', 12), background_color="#E6F3FF")], 
-    [sg.Column([[my_image]], justification='right')]
+    [sg.Column([
+        [sg.Text('',font=('Default', 3), background_color="#E6F3FF")], 
+        [sg.Button('Choose settings for this batch', **button_style), 
+         sg.Button('Rerun previous batch', **button_style), sg.Button('Start processing', **button_style)],
+        [sg.Text('',font=('Default', 3), background_color="#E6F3FF")], 
+        [sg.Text('File info', font=('Default', 14, 'bold'), background_color="#E6F3FF")],
+        [sg.Multiline('', autoscroll=True, size=(120, 10), k='-FILE_INFO-', reroute_stdout=True)],
+        [sg.Text('Run info', font=('Default', 14, 'bold'), background_color="#E6F3FF")],
+        [sg.Multiline('', autoscroll=True, size=(120, 10), k='-RUN_INFO-', reroute_stdout=True)],
+        [sg.ProgressBar(progress_value1, orientation='h', size=(110, 10), 
+                       key='progressbar_files', bar_color=['red', 'lightgrey'])],
+        [sg.ProgressBar(progress_value2, orientation='h', size=(110, 10), 
+                       key='progressbar_epochs', bar_color=['#003DA6', 'lightgrey'])],
+        [sg.Text('',font=('Default', 3), background_color="#E6F3FF")], 
+        [sg.Button('Exit', button_color=exit_button_color, 
+                   border_width=0, pad=(10, 5), mouseover_colors=('#FFFFFF', 'firebrick'))],
+        [sg.Text('Yorben Lodema \nHerman van Dellen',font=('Default', 12), background_color="#E6F3FF")], 
+        [sg.VPush(background_color="#E6F3FF")],  # Added background color
+        [sg.Push(background_color="#E6F3FF"), sg.Column([[my_image]], pad=(0,0), background_color="#E6F3FF")]  # Added background color
+    ], expand_y=True, background_color="#E6F3FF")]  # Added background color to main Column
 ]
 
 def print_dict(dict):# pprint and json.print do not work well with composite keys!
@@ -1017,7 +1020,7 @@ def save_whole_EEG_to_txt(raw_output,config,base,scalings=None,filtering=False,l
 ##################################################################################
 
 window = sg.Window('MNE-python based EEG Preprocessing', layout, location=(
-    30, 30), size=(1000, 750), background_color="#E6F3FF", finalize=True, font=font)
+    30, 30), size=(1000, 775), background_color="#E6F3FF", finalize=True, font=font)
 
 progress_bar_files = window.find_element('progressbar_files')
 progress_bar_epochs = window.find_element('progressbar_epochs')
