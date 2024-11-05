@@ -23,6 +23,8 @@ dependencies = [
     "matplotlib",
     "scipy",
     "scikit-learn",
+    "openpyxl",
+    "nibabel",
 ]
 description = "eeg preprocessing"
 keywords = [
