@@ -9,18 +9,18 @@ The software is currently able to:
 - Drop bad channels entirely.
 - Interpolate bad channels after visual inspection.
 - Apply an average reference.
-- Apply independent component analysis to remove artefacts.
+- Apply independent component analysis to remove artefacts. For this, you can change the number of components that are calculated (please read up on this before use).
 - Apply beamformer source reconstruction to the EEG (standard MNE LCMV beamformer with standard head model).
-- Down sample the file to a lower sample frequency.
+- Down sample the file to a lower sample frequency by specifying a downsample factor (like a foctor of 4: from 2048 Hz to 512 Hz for example).
 - Perform interactive visual epoch selection.
-- Perform filtering in different frequency bands and broadband output.
-- After performing analyses on a batch, rerun the batch with preservation of channel and epoch selection.
+- Perform filtering in different frequency bands and broadband output. These bands can be changed for the current batch in the GUI or more permanently in the settings file (see under tips and issues).
+- After performing analyses on a batch, rerun the batch with preservation of channel and epoch selection. To do this, select the previously created .pkl file.
 - Log the chosen settings and performed analyses steps in a log file.
 
 The software is not (yet) able to:
 - Analyse task EEG data.
 - Calculate quantitative features on the output epochs (coming in the near future).
-- Open EEG files with data types not mentioned previously (you can put this in a new GitHub issue if you need another filetype).
+- Open EEG files with data types not mentioned previously (you can put this in a new GitHub issue if you need to load another EEG filetype).
 
 ### Tips for use and known issues
 When choosing the settings for the current analysis batch, most windows contain a "more info" button which will take you to an appropriate MNE documentation page.
@@ -33,7 +33,9 @@ If the program glitches or stops working, we found that it works best to stop th
 
 There is currently an unresolved problem where removing multiple ICA components and/or interpolating channels can result in a data rank that is too low to caculate the beamforming solution. See [here](https://mailman.science.ru.nl/pipermail/fieldtrip/2014-March/033565.html) for an explanation of this problem.
 
-When using Spyder IDE to run the program (like we do), Spyder prompts the user that Spyder does not have the spyder-kernels module. Please follow the instructions provided by Spyder. 
+When using Spyder IDE to run the program (like we do), initially Spyder can prompt the user that it does not have the spyder-kernels module. Please follow the instructions provided in the console.
+
+It is possible to change the underlying Python code (however, this is mostly unnecessary). Of the two main scripts, eeg_processing_script.py and eeg_processing_settings.py, the latter is the easiest to modify. Here, you can for instance rather easily change the standard output filter frequency bands (like delta, theta etc.). Note however, that it is currently not possible to increase or decrease the number of bands that the output is filtered in. In some IDE's, or with certain setups, it can also be necessary to change the matplotlib backend, for instance from TkAgg to Qt5Agg in the beginning of the settings script. 
 
 ## Installation
 
