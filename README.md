@@ -81,6 +81,7 @@ Install the package and its dependencies using pip:
 ```bash
 python -m pip install .
 ```
+Note: make sure to install an editable version if you are a developer and want to make large changes besides changing something inside the scripts.
 
 ### 5. Verify Installation
 
