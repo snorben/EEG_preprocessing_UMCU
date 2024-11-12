@@ -1,11 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 Created on Wed May  1 09:56:45 2024
 # x
 @author: hvand
 """
-import mne
+
 import matplotlib
+import mne
 import PySimpleGUI as sg
 
 # matplotlib.use('Qt5Agg')  # Set the backend to Qt5
@@ -93,6 +93,7 @@ settings['frequency_bands'] = ("delta_low","delta_high","theta_low","theta_high"
                                "alpha_high","beta1_low", "beta1_high","beta2_low","beta2_high",
                                "broadband_low","broadband_high")
 
+# Default filter settings
 settings['cut_off_frequency','delta_low'] = 0.5
 settings['cut_off_frequency','delta_high'] = 4
 settings['cut_off_frequency','theta_low'] = 4

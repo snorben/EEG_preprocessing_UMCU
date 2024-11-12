@@ -87,3 +87,27 @@ filename = "pyproject.toml"
 
 [[tool.bumpversion.files]]
 filename = "CITATION.cff"
+
+[tool.ruff]
+output-format = "concise"
+
+ignore = [
+    "E501", # Line too long
+    "E402" # Module level import not at top of file
+]
+
+[tool.ruff.lint]
+select = [
+    # pycodestyle
+    "E",
+    # Pyflakes
+    "F",
+    # pyupgrade
+    "UP",
+    # flake8-bugbear
+    "B",
+    # flake8-simplify
+    "SIM",
+    # isort
+    "I",
+]
