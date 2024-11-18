@@ -330,6 +330,8 @@ def ask_epoch_selection(config):
                 continue
             if event == 'Yes':
                 config['apply_epoch_selection'] = 1
+                if config['rerun']== 1:
+                    rerun_no_previous_epoch_selection = 1
                 config = ask_epoch_length(
                     config,settings)    # ask epoch length
                 break
@@ -735,7 +737,6 @@ def create_raw(config, montage, no_montage_files):
                        'Please drop these channel(s)!',
                        location=(100, 100))
             
-        return raw, config
         
     elif config['file_pattern'] == "*.bdf":
         raw = mne.io.read_raw_bdf(file_path, preload=True)
@@ -918,7 +919,7 @@ def filter_output_raw(raw_output,config,l_freq,h_freq):
         h_freq = None
         print("No additional (>) 47 Hz low pass filter applied, already broadband filtered before beamformer and/or ICA")
     
-    if l_freq and h_freq:
+    if l_freq or h_freq:
         raw_output= raw_output.copy().filter(l_freq=l_freq, h_freq=h_freq,
             picks='eeg',l_trans_bandwidth=l_trans, h_trans_bandwidth=h_trans)
     return raw_output
@@ -1023,6 +1024,10 @@ while True:# @noloop remove
     event, values = window.read()
     if event == "Exit" or event == sg.WIN_CLOSED:
         break
+    
+    rerun_no_previous_epoch_selection = 0
+    
+    
     # note:dependencies on config['rerun'] are always handled in the ask_ or select_ functions
     if event == "Rerun previous batch" :
         config = load_config_file() # .pkl file
@@ -1155,7 +1160,9 @@ while True:# @noloop remove
                 if config['apply_epoch_selection']:
                     plot_power_spectrum(raw_temp, filtered=True)
 
-                if config['apply_epoch_selection']:
+                if config['apply_epoch_selection'] and config['rerun'] == 0:
+                    config = perform_epoch_selection(raw_temp,config,temporary_sample_f)
+                elif config['apply_epoch_selection'] and rerun_no_previous_epoch_selection == 1:
                     config = perform_epoch_selection(raw_temp,config,temporary_sample_f)
 
 

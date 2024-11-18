@@ -35,6 +35,7 @@ settings['apply_output_filtering'] = 0
 settings['epoch_length'] = 0.0
 settings['apply_ica'] = 0
 settings['rerun'] = 0
+#settings['rerun_no_previous_epoch_selection'] = 0
 settings['apply_beamformer'] = 0
 settings['channels_to_be_dropped_selected'] = 0
 settings['nr_ica_components'] = 0
