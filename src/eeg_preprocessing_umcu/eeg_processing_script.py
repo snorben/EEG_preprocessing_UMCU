@@ -1,13 +1,12 @@
-# -*- coding:utf-8 -*- .!
 """
-Created on Thu Jan 11 08:50:06 2024
 @authors:Herman van Dellen en Yorben Lodema.
 """
 
 PySimpleGUI_License = "e1yWJaMdasWkN4l4b7nYNllfVqHolVwwZUS5IA6pIekqRAp7cf3FRNyZakWgJy1ldnGXlZv7bhi9Ihs0Ifkvxbp2YA2KVOuKct2IVPJHRsC1IZ6tMETZcDyzOjDDQI2KMEzVIM3WMoSXw2izTBGmlgjvZrWx5GzDZHUvR0lZcOGCxBvSeXWR1OlFbsnKRlWGZkXNJYzXaLWC9TuQIljdo8iaNpSW4GwlIiiBwZi0TOmBFwtvZnUCZrpQc3ntNF0IIcj3ozi6W3Wj9QycYnmfV7u4ImirwWiLTimEFutRZ8Ujxih2c238QuirOCi9JAMabp29R9lzbBWSE9i2LWCrJkDfbX2A1vwVYAWY5y50IEjGojizI4itwdikQk3XVdzJdnGF94tYZjXDJnJhRpCNIr6RIijsQVxDNgjmYQyvIki5wWitRgGVFK0BZqUol9z8cU3cVIlyZaCkIY6uITj1IcwxMcjgQytEMtTZAztcMnD3k0ieLgCGJwEBYvXXRlldRuXLhgwwavX0J8lycMydIL6QI5j7IVwwMCjZYotyMgTmA6tQMmDUkZivLzCZJLFEbZWOFGp1biEHFjkAZ5HMJAlIcP3RMtinOoiaJJ5gbP3JJRimZIWn50sZbd2CRjlxbfWUFyAhcRHHJNv7d4Gf94uFLgmg1TlPIpilwAihS8VkBBBnZ8GER2yKZeX9NmzdIwjqociiMqTDQjz6LYj8Eky4MqSc4gydM5zvkfueMQTlEuiOf9Qt=e=R474cb6624d46e0ffc4738da48ec40ec6c752493664e4752ff53db807cace7e4621380eceb4d5de156b785a4403be2968b7a6a22be5c76e8b9cda0494edde848854d6e93a408dc85a76a78ee44989fdb316aafe12f99184914c3eec2accd1689a7983cb8f627bbf1c1ce62f546cc997b117824f4bed3d811de3d6eefd462b467e4bf7bd325190f51155d825c4ba5f300245d7b67550db63b79c8ffc6a34adf6fda39fcd06e2ab1406812358a35ac9f95eca70f2369b30c64b8b61a8e5ae61aa337084058d6616a62e06a4d4a75f10498e2d8a535e4f9dcc1ab389b8bb1a1528df10f2e8b9137f1d9b337c4dca8e20eec88414377e4e374e231b63e0eeae6d2490a0960db48c15809ff54ae57ae06fb1e9679b64dbba7458a9ae271203fa38d2582b5492c92269e8af8ec7cd3e88b50fbaa8a616fa3091ce0a1b5a90abe67666dc7c30d83f4c175d759481f7bda16854a7c1c52148763b845bba4303a8ea97104cdc0258b227c08f59d18db8b753b21f5caa0a47c28958d09ed5cd65c86741a5424a118cb0336ee21aa8e7caa2dc99a093c8d4ec1f77ebf0edebc4b4a59b2014bd44597b3a46b97b3471f8ef2314fe0cc2786e03a1c1881fe3a9c5fdf5b993cde580024846d9921808d77889b25eeea64761c94b44582e0b630a8b888e6d51574b89e1f4fa872f61d1a4842e09ea9db5cd5ae5ed40fc2a96e59b5c62c72d9734b0"
 
-import PySimpleGUI as sg
 import os
+
+import PySimpleGUI as sg
 import pandas as pd
 import mne
 import numpy as np
@@ -18,9 +17,10 @@ import traceback
 import webbrowser as wb
 from mne.preprocessing import ICA
 from datetime import datetime
-from eeg_processing_settings import *
 from mne.beamformer import apply_lcmv_raw, make_lcmv
 from mne.datasets import fetch_fsaverage
+
+from eeg_processing_settings import *
 
 #settings={} # suppress warnings
 
@@ -116,7 +116,7 @@ def load_config_file():
     txt=settings['load_config_file','text']
     config_file=sg.popup_get_file(txt,file_types=(('.pkl files','*.pkl'),),no_window=False,background_color='white', 
                                font=font,location=(100, 100))
-    if type(config_file) != type(""):
+    if not isinstance(config_file, str):
         sg.popup_error ("No file selected","Ok")
         exit()
     config=load_config(config_file)
@@ -333,6 +333,8 @@ def ask_epoch_selection(config):
                 continue
             if event == 'Yes':
                 config['apply_epoch_selection'] = 1
+                if config['rerun']== 1:
+                    rerun_no_previous_epoch_selection = 1
                 config = ask_epoch_length(
                     config,settings)    # ask epoch length
                 break
@@ -606,7 +608,6 @@ def create_spatial_filter(raw_b,config):
     The MNE function make_lcmv is used.
     '''
     fs_dir = fetch_fsaverage(verbose=True)
-    subjects_dir = os.path.dirname(fs_dir)
     subject = "fsaverage"
     trans = "fsaverage"
     # Loading boundary-element model
@@ -626,10 +627,6 @@ def create_spatial_filter(raw_b,config):
         bem=bem,
     )
 
-    label_names = mne.read_labels_from_annot(
-        'fsaverage', parc='aparc', hemi='both', subjects_dir=subjects_dir)
-    source_labels = [
-        label.name for label in label_names if 'unknown' not in label.name.lower()]
     # Forward Solution
     fwd = mne.make_forward_solution(
         raw_b.info,
@@ -674,12 +671,12 @@ def create_raw(config, montage, no_montage_files):
     If no header is present, it generates channel names automatically (CH1, CH2, etc.).
     '''
     if config['file_pattern'] == "*.txt":
-        with open(file_path, "r") as file:
+        with open(file_path) as file:
             first_line = file.readline().strip()
             
         # Try to convert first line values to float to check if they're numeric
         try:
-            first_values = [float(x) for x in first_line.split('\t')]
+            _ = [float(x) for x in first_line.split('\t')]
             has_header = False
         except ValueError:
             has_header = True
@@ -743,7 +740,6 @@ def create_raw(config, montage, no_montage_files):
                        'Please drop these channel(s)!',
                        location=(100, 100))
             
-        return raw, config
         
     elif config['file_pattern'] == "*.bdf":
         raw = mne.io.read_raw_bdf(file_path, preload=True)
@@ -926,7 +922,7 @@ def filter_output_raw(raw_output,config,l_freq,h_freq):
         h_freq = None
         print("No additional (>) 47 Hz low pass filter applied, already broadband filtered before beamformer and/or ICA")
     
-    if not (l_freq==None and h_freq==None):
+    if l_freq or h_freq:
         raw_output= raw_output.copy().filter(l_freq=l_freq, h_freq=h_freq,
             picks='eeg',l_trans_bandwidth=l_trans, h_trans_bandwidth=h_trans)
     return raw_output
@@ -1031,6 +1027,10 @@ while True:# @noloop remove
     event, values = window.read()
     if event == "Exit" or event == sg.WIN_CLOSED:
         break
+    
+    rerun_no_previous_epoch_selection = 0
+    
+    
     # note:dependencies on config['rerun'] are always handled in the ask_ or select_ functions
     if event == "Rerun previous batch" :
         config = load_config_file() # .pkl file
@@ -1163,7 +1163,9 @@ while True:# @noloop remove
                 if config['apply_epoch_selection']:
                     plot_power_spectrum(raw_temp, filtered=True)
 
-                if config['apply_epoch_selection']:
+                if config['apply_epoch_selection'] and config['rerun'] == 0:
+                    config = perform_epoch_selection(raw_temp,config,temporary_sample_f)
+                elif config['apply_epoch_selection'] and rerun_no_previous_epoch_selection == 1:
                     config = perform_epoch_selection(raw_temp,config,temporary_sample_f)
 
 
@@ -1237,7 +1239,7 @@ while True:# @noloop remove
                     
                     if config['apply_output_filtering']:
                         
-                        frequency_band_pairs = list(zip(config['frequency_bands'][::2], config['frequency_bands'][1::2]))
+                        frequency_band_pairs = list(zip(config['frequency_bands'][::2], config['frequency_bands'][1::2], strict=True))
 
                         for low_band, high_band in frequency_band_pairs:
                             selected_epochs_sensor_filt = apply_epoch_selection(
@@ -1286,7 +1288,7 @@ while True:# @noloop remove
                     progress_bar_epochs.UpdateBar(1, 1)
                     
                     if config['apply_output_filtering']:
-                        frequency_band_pairs = list(zip(config['frequency_bands'][::2], config['frequency_bands'][1::2]))
+                        frequency_band_pairs = list(zip(config['frequency_bands'][::2], config['frequency_bands'][1::2], strict=True))
                         
                         for low_band, high_band in frequency_band_pairs:
                             raw_filt = filter_output_raw(raw,config,
@@ -1304,7 +1306,7 @@ while True:# @noloop remove
                         )
 
                         if config['apply_output_filtering']:
-                            frequency_band_pairs = list(zip(config['frequency_bands'][::2], config['frequency_bands'][1::2]))
+                            frequency_band_pairs = list(zip(config['frequency_bands'][::2], config['frequency_bands'][1::2], strict=True))
         
                             for low_band, high_band in frequency_band_pairs:
                                 raw_source_filt = filter_output_raw(raw_source,config,
